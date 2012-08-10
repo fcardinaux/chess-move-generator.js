@@ -181,6 +181,18 @@ CMGPosition = (function() {
     return allowedCastlingString.split('').reduce(func, 0);
   };
 
+  CMGPosition._allowedCastlingValueToString = function(allowedCastling) {
+    var allowedCastlingString, bkChar, bqChar, wkChar, wqChar;
+    wqChar = wkChar = bqChar = bkChar = '';
+    if (allowedCastling & CMGPosition.CASTLING_WHITE_QUEEN) wqChar = 'Q';
+    if (allowedCastling & CMGPosition.CASTLING_WHITE_KING) wkChar = 'K';
+    if (allowedCastling & CMGPosition.CASTLING_BLACK_QUEEN) bqChar = 'q';
+    if (allowedCastling & CMGPosition.CASTLING_BLACK_KING) bkChar = 'k';
+    allowedCastlingString = [wkChar, wqChar, bkChar, bqChar].join('');
+    if (allowedCastlingString === '') return '-';
+    return allowedCastlingString;
+  };
+
   CMGPosition._enPassantStringToSquare = function(enPassantString) {
     var colValue, rowValue;
     if (enPassantString === '-') return false;
@@ -257,7 +269,7 @@ CMGPosition = (function() {
     var allowedCastlingString, boardString, enPassantString, turnChar;
     boardString = this._piecesToBoardString(this.pieces);
     turnChar = this.turn;
-    allowedCastlingString = this._allowedCastlingValueToString(this.allowedCastling);
+    allowedCastlingString = CMGPosition._allowedCastlingValueToString(this.allowedCastling);
     enPassantString = this._enPassantSquareToString(this.enPassantSquare);
     return [boardString, turnChar, allowedCastlingString, enPassantString].join(' ');
   };
@@ -297,18 +309,6 @@ CMGPosition = (function() {
     }
     if (emptySquareCounter !== 0) rowChars.push(emptySquareCounter);
     return rowChars.join('');
-  };
-
-  CMGPosition.prototype._allowedCastlingValueToString = function(allowedCastling) {
-    var allowedCastlingString, bkChar, bqChar, wkChar, wqChar;
-    wqChar = wkChar = bqChar = bkChar = '';
-    if (allowedCastling & CMGPosition.CASTLING_WHITE_QUEEN) wqChar = 'Q';
-    if (allowedCastling & CMGPosition.CASTLING_WHITE_KING) wkChar = 'K';
-    if (allowedCastling & CMGPosition.CASTLING_BLACK_QUEEN) bqChar = 'q';
-    if (allowedCastling & CMGPosition.CASTLING_BLACK_KING) bkChar = 'k';
-    allowedCastlingString = [wkChar, wqChar, bkChar, bqChar].join('');
-    if (allowedCastlingString === '') return '-';
-    return allowedCastlingString;
   };
 
   CMGPosition.prototype._enPassantSquareToString = function(squareNumber) {

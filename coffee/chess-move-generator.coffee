@@ -142,6 +142,19 @@ class CMGPosition
 
         allowedCastlingString.split('').reduce(func, 0)
 
+    @_allowedCastlingValueToString: (allowedCastling) ->
+        wqChar = wkChar = bqChar = bkChar = ''
+        wqChar = 'Q' if allowedCastling & CMGPosition.CASTLING_WHITE_QUEEN
+        wkChar = 'K' if allowedCastling & CMGPosition.CASTLING_WHITE_KING
+        bqChar = 'q' if allowedCastling & CMGPosition.CASTLING_BLACK_QUEEN
+        bkChar = 'k' if allowedCastling & CMGPosition.CASTLING_BLACK_KING
+
+        allowedCastlingString = [wkChar, wqChar, bkChar, bqChar].join('')
+        if allowedCastlingString is ''
+            return '-'
+
+        return allowedCastlingString
+
     @_enPassantStringToSquare: (enPassantString) ->
         if enPassantString is '-'
             return false
@@ -208,7 +221,7 @@ class CMGPosition
     toStringWithoutCounters: () ->
         boardString = @_piecesToBoardString(@pieces)
         turnChar = @turn # neither filtering nor transformation necessary in this direction
-        allowedCastlingString = @_allowedCastlingValueToString(@allowedCastling)
+        allowedCastlingString = CMGPosition._allowedCastlingValueToString(@allowedCastling)
         enPassantString = @_enPassantSquareToString(@enPassantSquare)
 
         [boardString, turnChar, allowedCastlingString, enPassantString].join(' ')
@@ -254,19 +267,6 @@ class CMGPosition
             rowChars.push(emptySquareCounter)
 
         rowChars.join('')
-
-    _allowedCastlingValueToString: (allowedCastling) ->
-        wqChar = wkChar = bqChar = bkChar = ''
-        wqChar = 'Q' if allowedCastling & CMGPosition.CASTLING_WHITE_QUEEN
-        wkChar = 'K' if allowedCastling & CMGPosition.CASTLING_WHITE_KING
-        bqChar = 'q' if allowedCastling & CMGPosition.CASTLING_BLACK_QUEEN
-        bkChar = 'k' if allowedCastling & CMGPosition.CASTLING_BLACK_KING
-
-        allowedCastlingString = [wkChar, wqChar, bkChar, bqChar].join('')
-        if allowedCastlingString is ''
-            return '-'
-
-        return allowedCastlingString
 
     _enPassantSquareToString: (squareNumber) ->
         if squareNumber is false
