@@ -12,7 +12,7 @@ Short reminder of ASCII:
     Z           90
     a           97
 
-The board and the square codes:
+The board and the square codes in 0x88 representation:
     * decimal value
     * octal value
 
@@ -42,8 +42,100 @@ The board and the square codes:
     |   0 |   1 |   2 |   3 |   4 |   5 |   6 |   7 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
        A     B     C     D     E     F     G     H
+
+The board in four bitboard quadrants (due to integer limitations in JavaScript):
+
+    +---+---+---+---+---+---+---+---+
+   8|   |   |   |   |   |   |   |   |
+    +-             -+-             -+
+   7|               |               |
+    +-      2      -+-      3      -+
+   6|               |               |
+    +-             -+-             -+
+   5|   |   |   |   |   |   |   |   |
+    +---+---+---+---+---+---+---+---+
+   4|   |   |   |   |   |   |   |   |
+    +-             -+-             -+
+   3|               |               |
+    +-      0      -+-      1      -+
+   2|               |               |
+    +-             -+-             -+
+   1|   |   |   |   |   |   |   |   |
+    +---+---+---+---+---+---+---+---+
+      A   B   C   D   E   F   G   H
+
+Numbering of each bitboard quadrant (hexadecimal here)
+
+    +---+---+---+---+
+   4| C | D | E | F |
+    +---+---+---+---+
+   3| 8 | 9 | A | B |
+    +---+---+---+---+
+   2| 4 | 5 | 6 | 7 |
+    +---+---+---+---+
+   1| 0 | 1 | 2 | 3 |
+    +---+---+---+---+
+      A   B   C   D
+
+
+Definitions:
+
+* "Pseudo-legal moves are all moves that follows the basic move rules.
+  I.e. the move does not take the piece off the board, or captures own pieces.
+  But it might leave the own king in check, castle while in check
+  or castle over a checked square." ( -> Jonatan Pettersson's Move generation)
 */
-var CMGMove, CMGPiece, CMGPosition;
+var CMGMove, CMGPiece, CMGPosition, bishopBitBoardStringArray, bitBoardStringArrayToIntegers, blackPawnMoveBitBoardStringArray, blackPawnStartingMoveBitBoardStringArray, blackPawnTakeBitBoardStringArray, kingBitBoardStringArray, knightBitBoardStringArray, loadMoves, queenBitBoardStringArrays, rookBitBoardStringArray, whitePawnMoveBitBoardStringArray, whitePawnStartingMoveBitBoardStringArray, whitePawnTakeBitBoardStringArray;
+
+queenBitBoardStringArrays = ['100000010000001', '010000010000010', '001000010000100', '000100010001000', '000010010010000', '000001010100000', '000000111000000', '111111101111111', '000000111000000', '000001010100000', '000010010010000', '000100010001000', '001000010000100', '010000010000010', '100000010000001'];
+
+rookBitBoardStringArray = ['000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '111111101111111', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000'];
+
+bishopBitBoardStringArray = ['100000000000001', '010000000000010', '001000000000100', '000100000001000', '000010000010000', '000001000100000', '000000101000000', '000000000000000', '000000101000000', '000001000100000', '000010000010000', '000100000001000', '001000000000100', '010000000000010', '100000000000001'];
+
+knightBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000101000000', '000001000100000', '000000000000000', '000001000100000', '000000101000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+kingBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000111000000', '000000101000000', '000000111000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+blackPawnMoveBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+whitePawnMoveBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+blackPawnStartingMoveBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+whitePawnStartingMoveBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+blackPawnTakeBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000101000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+whitePawnTakeBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000101000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+bitBoardStringArrayToIntegers = function(bitBoardStringArray, offsetY, offsetX) {
+  var bottomLeft, bottomRight, line, lineId, line_16_8, rectangle_16_8, square_8_8, start, topLeft, topRight, _i, _len, _len2;
+  start = 7 - offsetY;
+  rectangle_16_8 = bitBoardStringArray.slice(start);
+  if (start < 7) rectangle_16_8 = rectangle_16_8.slice(0, 8);
+  square_8_8 = [];
+  for (_i = 0, _len = rectangle_16_8.length; _i < _len; _i++) {
+    line_16_8 = rectangle_16_8[_i];
+    square_8_8.push(line_16_8.substr(offsetX, 8));
+  }
+  topLeft = topRight = bottomLeft = bottomRight = [];
+  for (lineId = 0, _len2 = square_8_8.length; lineId < _len2; lineId++) {
+    line = square_8_8[lineId];
+    if (lineId < 4) {
+      topLeft.push(line.substr(0, 4));
+      topRight.push(line.substr(4));
+    } else {
+      bottomLeft.push(line.substr(0, 4));
+      bottomRight.push(line.substr(4));
+    }
+  }
+  return [parseInt(bottomLeft.join(''), 2), parseInt(bottomRight.join(''), 2), parseInt(topLeft.join(''), 2), parseInt(topRight.join(''), 2)];
+};
+
+loadMoves = function(bitBoardStringArray) {
+  return [bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 0)];
+};
 
 CMGPosition = (function() {
 
@@ -82,6 +174,16 @@ CMGPosition = (function() {
   CMGPosition.CASTLING_BLACK_KING = 2;
 
   CMGPosition.CASTLING_BLACK_QUEEN = 1;
+
+  CMGPosition.QUEEN_MOVES = loadMoves(queenBitBoardStringArray);
+
+  CMGPosition.ROOK_MOVES = loadMoves(rookBitBoardStringArray);
+
+  CMGPosition.BISHOP_MOVES = loadMoves(bishopBitBoardStringArray);
+
+  CMGPosition.KNIGHT_MOVES = loadMoves(knightBitBoardStringArray);
+
+  CMGPosition.KING_MOVES_WITHOUT_CASTLING = loadMoves(kingBitBoardStringArray);
 
   CMGPosition.fromString = function(positionString) {
     /*
@@ -243,6 +345,8 @@ CMGPosition = (function() {
             @param halfMoveClock (integer)
             @param moveNumber (integer)
     */
+    this.bitBoards = {};
+    this._generateBitBoards();
   }
 
   CMGPosition.prototype.playerColorCode = function() {
@@ -361,6 +465,58 @@ CMGPosition = (function() {
 
   CMGPosition.prototype._getPieceOnSquare = function(squareKey) {
     return CMGPosition._getPieceOnSquare(this.pieces, squareKey);
+  };
+
+  CMGPosition.prototype._generateBitBoards = function() {
+    var bvs, color, square, type, _ref, _ref2, _results;
+    this.bitBoards.allPieces = 0x0;
+    this.bitBoards.allPiecesOfColorAndType = {
+      'b': {
+        'r': 0x0,
+        'n': 0x0,
+        'b': 0x0,
+        'k': 0x0,
+        'q': 0x0,
+        'p': 0x0
+      },
+      'w': {
+        'r': 0x0,
+        'n': 0x0,
+        'b': 0x0,
+        'k': 0x0,
+        'q': 0x0,
+        'p': 0x0
+      }
+    };
+    _ref = this.pieces;
+    _results = [];
+    for (square in _ref) {
+      _ref2 = _ref[square], color = _ref2.color, type = _ref2.type;
+      bvs = this._bitValueOfSquare(square);
+      this.bitBoards.allPieces |= bvs;
+      _results.push(this.bitBoards.allPiecesOfColorAndType[color][type] |= bvs);
+    }
+    return _results;
+  };
+
+  CMGPosition.prototype._bitValueOfSquare = function(square) {
+    if (square < 0x20) {
+      return Math.pow(2, square);
+    } else if (square < 0x40) {
+      return Math.pow(2, square - 0x10);
+    } else if (square < 0x60) {
+      return Math.pow(2, square - 0x20);
+    } else if (square < 0x100) {
+      return Math.pow(2, square - 0x30);
+    } else if (square < 0x120) {
+      return Math.pow(2, square - 0x40);
+    } else if (square < 0x140) {
+      return Math.pow(2, square - 0x50);
+    } else if (square < 0x160) {
+      return Math.pow(2, square - 0x60);
+    } else {
+      return Math.pow(2, square - 0x70);
+    }
   };
 
   return CMGPosition;

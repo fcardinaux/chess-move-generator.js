@@ -12,7 +12,7 @@ Short reminder of ASCII:
     Z           90
     a           97
 
-The board and the square codes:
+The board and the square codes in 0x88 representation:
     * decimal value
     * octal value
 
@@ -43,6 +43,41 @@ The board and the square codes:
     +-----+-----+-----+-----+-----+-----+-----+-----+
        A     B     C     D     E     F     G     H
 
+The board in four bitboard quadrants (due to integer limitations in JavaScript):
+
+    +---+---+---+---+---+---+---+---+
+   8|   |   |   |   |   |   |   |   |
+    +-             -+-             -+
+   7|               |               |
+    +-      2      -+-      3      -+
+   6|               |               |
+    +-             -+-             -+
+   5|   |   |   |   |   |   |   |   |
+    +---+---+---+---+---+---+---+---+
+   4|   |   |   |   |   |   |   |   |
+    +-             -+-             -+
+   3|               |               |
+    +-      0      -+-      1      -+
+   2|               |               |
+    +-             -+-             -+
+   1|   |   |   |   |   |   |   |   |
+    +---+---+---+---+---+---+---+---+
+      A   B   C   D   E   F   G   H
+
+Numbering of each bitboard quadrant (hexadecimal here)
+
+    +---+---+---+---+
+   4| C | D | E | F |
+    +---+---+---+---+
+   3| 8 | 9 | A | B |
+    +---+---+---+---+
+   2| 4 | 5 | 6 | 7 |
+    +---+---+---+---+
+   1| 0 | 1 | 2 | 3 |
+    +---+---+---+---+
+      A   B   C   D
+
+
 Definitions:
 
 * "Pseudo-legal moves are all moves that follows the basic move rules.
@@ -50,6 +85,308 @@ Definitions:
   But it might leave the own king in check, castle while in check
   or castle over a checked square." ( -> Jonatan Pettersson's Move generation)
 ###
+
+queenBitBoardStringArrays = [
+    '100000010000001',
+    '010000010000010',
+    '001000010000100',
+    '000100010001000',
+    '000010010010000',
+    '000001010100000',
+    '000000111000000',
+    '111111101111111',
+    '000000111000000',
+    '000001010100000',
+    '000010010010000',
+    '000100010001000',
+    '001000010000100',
+    '010000010000010',
+    '100000010000001'
+]
+
+rookBitBoardStringArray = [
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '111111101111111',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000'
+]
+
+bishopBitBoardStringArray = [
+    '100000000000001',
+    '010000000000010',
+    '001000000000100',
+    '000100000001000',
+    '000010000010000',
+    '000001000100000',
+    '000000101000000',
+    '000000000000000',
+    '000000101000000',
+    '000001000100000',
+    '000010000010000',
+    '000100000001000',
+    '001000000000100',
+    '010000000000010',
+    '100000000000001'
+]
+
+knightBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000101000000',
+    '000001000100000',
+    '000000000000000',
+    '000001000100000',
+    '000000101000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+kingBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000111000000',
+    '000000101000000',
+    '000000111000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+blackPawnMoveBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000010000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+whitePawnMoveBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000010000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+blackPawnStartingMoveBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000010000000',
+    '000000010000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+whitePawnStartingMoveBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000010000000',
+    '000000010000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+blackPawnTakeBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000101000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+whitePawnTakeBitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000101000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+bitBoardStringArrayToIntegers = (bitBoardStringArray, offsetY, offsetX) ->
+    # First, determine the 8x8 square that represents the bitboard
+    start = 7 - offsetY
+    rectangle_16_8 = bitBoardStringArray.slice(start)
+    if start < 7
+        rectangle_16_8 = rectangle_16_8.slice(0, 8) # Remember: slice ends at 8 - 1 = 7
+    square_8_8 = []
+    for line_16_8 in rectangle_16_8
+        square_8_8.push(line_16_8.substr(offsetX, 8))
+
+    # Second, split the bitboard into four quadrants
+    topLeft = topRight = bottomLeft = bottomRight = []
+    for line, lineId in square_8_8
+        if lineId < 4
+            topLeft.push(line.substr(0, 4))
+            topRight.push(line.substr(4))
+        else
+            bottomLeft.push(line.substr(0, 4))
+            bottomRight.push(line.substr(4))
+
+    # Finally, return the four quadrants as an array of four integers
+    [
+        parseInt(bottomLeft.join(''), 2),
+        parseInt(bottomRight.join(''), 2),
+        parseInt(topLeft.join(''), 2),
+        parseInt(topRight.join(''), 2)
+    ]
+
+loadMoves = (bitBoardStringArray) ->
+    [
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 7 ), # A1
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 0 ), # H1
+
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 7 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 0 ),
+
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 7 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 0 ),
+
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 7 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 0 ),
+
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 7 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 0 ),
+
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 7 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 0 ),
+
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 7 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 0 ),
+
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 7 ), # A8
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 6 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 5 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 4 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 3 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 2 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 1 ),
+        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 0 )  # H8
+        ]
+
 
 class CMGPosition
     # Noticeable values in 0x88 representation:
@@ -73,6 +410,18 @@ class CMGPosition
     @CASTLING_WHITE_QUEEN:  4
     @CASTLING_BLACK_KING:   2
     @CASTLING_BLACK_QUEEN:  1
+
+
+    # Chess moves (with origin = H8)
+    # * note that parseInt is the "simplest" way of representing binary numbers in JS
+    # * queens, rooks, bishops and knight: independant of position
+    @QUEEN_MOVES: loadMoves(queenBitBoardStringArray)
+    @ROOK_MOVES: loadMoves(rookBitBoardStringArray)
+    @BISHOP_MOVES: loadMoves(bishopBitBoardStringArray)
+    @KNIGHT_MOVES: loadMoves(knightBitBoardStringArray)
+    # * kings: ordinary moves (castling done separately)
+    @KING_MOVES_WITHOUT_CASTLING: loadMoves(kingBitBoardStringArray)
+    # * pawns: all ordinary moves, all 2-square initial moves, all promotions
 
     # -------------------------------------------------------------------------
     # Public functions of class (comparable to static methods)
@@ -207,6 +556,9 @@ class CMGPosition
         @param moveNumber (integer)
         ###
 
+        @bitBoards = {}
+        @_generateBitBoards()
+
     # -------------------------------------------------------------------------
     # Public functions of object (comparable to non static methods)
 
@@ -321,6 +673,48 @@ class CMGPosition
 
     _getPieceOnSquare: (squareKey) ->
         CMGPosition._getPieceOnSquare(@pieces, squareKey)
+
+    _generateBitBoards: () ->
+        @bitBoards.allPieces = 0x0
+        @bitBoards.allPiecesOfColorAndType =
+            'b':
+                'r': 0x0
+                'n': 0x0
+                'b': 0x0
+                'k': 0x0
+                'q': 0x0
+                'p': 0x0
+            'w':
+                'r': 0x0
+                'n': 0x0
+                'b': 0x0
+                'k': 0x0
+                'q': 0x0
+                'p': 0x0
+
+        for square, {color: color, type: type} of @pieces
+            bvs = @_bitValueOfSquare(square)
+            @bitBoards.allPieces |= bvs
+            @bitBoards.allPiecesOfColorAndType[color][type] |= bvs
+
+    _bitValueOfSquare: (square) ->
+        # All these tests are necessary because of the 0x88 representation
+        if square < 0x20
+            return Math.pow(2, square)
+        else if square < 0x40
+            return Math.pow(2, square - 0x10)
+        else if square < 0x60
+            return Math.pow(2, square - 0x20)
+        else if square < 0x100
+            return Math.pow(2, square - 0x30)
+        else if square < 0x120
+            return Math.pow(2, square - 0x40)
+        else if square < 0x140
+            return Math.pow(2, square - 0x50)
+        else if square < 0x160
+            return Math.pow(2, square - 0x60)
+        else
+            return Math.pow(2, square - 0x70)
 
 # =============================================================================
 
