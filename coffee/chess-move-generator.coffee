@@ -42,6 +42,13 @@ The board and the square codes:
     |   0 |   1 |   2 |   3 |   4 |   5 |   6 |   7 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
        A     B     C     D     E     F     G     H
+
+Definitions:
+
+* "Pseudo-legal moves are all moves that follows the basic move rules.
+  I.e. the move does not take the piece off the board, or captures own pieces.
+  But it might leave the own king in check, castle while in check
+  or castle over a checked square." ( -> Jonatan Pettersson's Move generation)
 ###
 
 class CMGPosition
