@@ -192,7 +192,7 @@ class CMGPosition
     constructor: (@pieces, @turn, @allowedCastling = 0, @enPassantSquare = false, @halfMoveClock = 0, @moveNumber = 0) ->
         ###
         Constructor
-        @param pieces ([CMGPieceOnSquare])
+        @param pieces ([CMGPiece])
         @param turn (false|"b"|"w")
         @param allowedCastling (integer)
         @param enPassantSquare (false|integer where integer is between 0 (bottom right corner) an 119 (top right corner in 0x88 representation)
@@ -225,6 +225,38 @@ class CMGPosition
         enPassantString = @_enPassantSquareToString(@enPassantSquare)
 
         [boardString, turnChar, allowedCastlingString, enPassantString].join(' ')
+
+    isValidMove: (fromSquare, toSquare, promotion = false) ->
+        'todo implement'
+
+    allPossibleMovesFromSquare: (_) ->
+        [] # todo implement
+
+    allPossibleMoves: () ->
+        result = []
+
+        for square, piece of @pieces
+            if piece.color isnt @turn
+                continue
+            moves = @allPossibleMovesFromSquare(square)
+            if moves.length > 0
+                result = result.concat(moves)
+
+        return result
+
+    isDraw: () ->
+        ###
+        Is the position a draw
+        @return boolean
+        ###
+        return 'todo'
+
+    getWinnerColorCode: () ->
+        ###
+        Get the winner color code
+        @return (false|'b'|'w')
+        ###
+        return 'todo'
 
     # -------------------------------------------------------------------------
     # Private functions of object (comparable to non static methods)
@@ -286,14 +318,17 @@ class CMGPosition
 # =============================================================================
 
 class CMGMove
-    constructor: (@from, @to, @newPosition, @castling = false, @taken = false) ->
+    constructor: (@fromSquare, @fromPiece, @toSquare, @toPiece, @newPosition, @castling = false, @takenPiece = false, @takenOnSquare = false) ->
         ###
         Constructor
-        @param from (CMGPieceOnSquare)
-        @param to (CMGPieceOnSquare)
+        @param fromSquare (integer)
+        @param fromPiece (CMGPiece)
+        @param toSquare (integer)
+        @param toPiece (CMGPiece)
         @param newPosition (CMGPosition)
-        @param castling (false|"queen"|"king")
-        @param taken (false|CMGPieceOnSquare)
+        @param castling (false|"q"|"k")
+        @param takenPiece (false|CMGPiece)
+        @param takenOnSquare (false|integer)
         ###
 
     toString:   () -> throw "Todo: implement"

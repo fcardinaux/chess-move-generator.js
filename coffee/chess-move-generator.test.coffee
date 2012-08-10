@@ -8,11 +8,32 @@ Licence: see README.md
 About Expresso: http://visionmedia.github.com/expresso/
 ###
 
+chessMoveGenerator = require('./chess-move-generator')
+positionClass = chessMoveGenerator.position
+
+compareArrays = (arr1, arr2) ->
+    # Inpired by http://stackoverflow.com/a/3432978
+    missingInArr1 = []
+    missingInArr2 = []
+
+    lookup1 = {}
+    for elem1 in arr1
+        lookup1[elem1] = elem1
+
+    lookup2 = {}
+    for elem2 in arr2
+        lookup2[elem2] = elem2
+        if typeof lookup1[elem2] is 'undefined'
+            missingInArr1.push(elem2)
+
+    for elem1 in arr1
+        if typeof lookup2[elem1] is 'undefined'
+            missingInArr2.push(elem1)
+
+    return [missingInArr1, missingInArr2]
+
 module.exports =
     'test CMGPosition#fromString': (beforeExit, assert) ->
-        chessMoveGenerator = require('./chess-move-generator')
-        positionClass = chessMoveGenerator.position
-
         positionStrings = [
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
             "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0",
@@ -38,8 +59,6 @@ module.exports =
             assert.eql(positionString, newPositionString)
 
     'test CMGPosition#_allowedCastlingValueToString': (beforeExit, assert) ->
-        chessMoveGenerator = require('./chess-move-generator')
-        positionClass = chessMoveGenerator.position
         assert.eql("KQkq",  positionClass._allowedCastlingValueToString(15))
         assert.eql("KQk",   positionClass._allowedCastlingValueToString(14))
         assert.eql("KQq",   positionClass._allowedCastlingValueToString(13))
@@ -58,8 +77,6 @@ module.exports =
         assert.eql("-",     positionClass._allowedCastlingValueToString( 0))
 
     'test CMGPosition#_allowedCastlingStringToValue': (beforeExit, assert) ->
-        chessMoveGenerator = require('./chess-move-generator')
-        positionClass = chessMoveGenerator.position
         assert.eql(15,      positionClass._allowedCastlingStringToValue("KQkq"))
         assert.eql(14,      positionClass._allowedCastlingStringToValue("KQk"))
         assert.eql(13,      positionClass._allowedCastlingStringToValue("KQq"))
@@ -78,8 +95,6 @@ module.exports =
         assert.eql( 0,      positionClass._allowedCastlingStringToValue("-"))
 
     'test CMGPosition#playerColorCode': (beforeExit, assert) ->
-        chessMoveGenerator = require('./chess-move-generator')
-        positionClass = chessMoveGenerator.position
         testData = [
             ['w', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
             ['b', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"],
@@ -91,8 +106,6 @@ module.exports =
             assert.eql(colorCode, positionObj.playerColorCode())
 
     'test CMGPosition#opponentColorCode': (beforeExit, assert) ->
-        chessMoveGenerator = require('./chess-move-generator')
-        positionClass = chessMoveGenerator.position
         testData = [
             ['b', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
             ['w', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"],
@@ -102,3 +115,27 @@ module.exports =
         for [colorCode, positionString] in testData
             positionObj = positionClass.fromString(positionString)
             assert.eql(colorCode, positionObj.opponentColorCode())
+
+    'test CMGPosition#allPossibleMoves': (beforeExit, assert) ->
+        testData = [
+            [
+                "4k2R/8/8/8/8/8/8/4K3 b - - 1 1",
+                [
+                    # King moves
+                    "7R/5k2/8/8/8/8/8/4K3 w - - 2 2",
+                    "7R/4k3/8/8/8/8/8/4K3 w - - 2 2",
+                    "7R/3k4/8/8/8/8/8/4K3 w - - 2 2"
+                ]
+            ]
+        ]
+
+        for [startPositionString, expectedEndPositionStrings] in testData
+            positionObj = positionClass.fromString(startPositionString)
+            calculatedMoves = positionObj.allPossibleMoves()
+            calculatedEndPositionStrings = []
+            for calculatedMove in calculatedMoves
+                calculatedEndPositionStrings.push(calculatedMove.newPosition)
+            result = compareArrays expectedEndPositionStrings, calculatedEndPositionStrings
+
+            assert.eql([[], []], result)
+

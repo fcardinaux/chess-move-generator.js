@@ -236,7 +236,7 @@ CMGPosition = (function() {
     this.moveNumber = moveNumber != null ? moveNumber : 0;
     /*
             Constructor
-            @param pieces ([CMGPieceOnSquare])
+            @param pieces ([CMGPiece])
             @param turn (false|"b"|"w")
             @param allowedCastling (integer)
             @param enPassantSquare (false|integer where integer is between 0 (bottom right corner) an 119 (top right corner in 0x88 representation)
@@ -272,6 +272,42 @@ CMGPosition = (function() {
     allowedCastlingString = CMGPosition._allowedCastlingValueToString(this.allowedCastling);
     enPassantString = this._enPassantSquareToString(this.enPassantSquare);
     return [boardString, turnChar, allowedCastlingString, enPassantString].join(' ');
+  };
+
+  CMGPosition.prototype.isValidMove = function(fromSquare, toSquare, promotion) {
+    if (promotion == null) promotion = false;
+    return 'todo implement';
+  };
+
+  CMGPosition.prototype.allPossibleMovesFromSquare = function(_) {
+    return [];
+  };
+
+  CMGPosition.prototype.allPossibleMoves = function() {
+    var moves, piece, result, square, _ref;
+    result = [];
+    _ref = this.pieces;
+    for (square in _ref) {
+      piece = _ref[square];
+      if (piece.color !== this.turn) continue;
+      moves = this.allPossibleMovesFromSquare(square);
+      if (moves.length > 0) result = result.concat(moves);
+    }
+    return result;
+  };
+
+  CMGPosition.prototype.isDraw = function() {
+    /*
+            Is the position a draw
+            @return boolean
+    */    return 'todo';
+  };
+
+  CMGPosition.prototype.getWinnerColorCode = function() {
+    /*
+            Get the winner color code
+            @return (false|'b'|'w')
+    */    return 'todo';
   };
 
   CMGPosition.prototype._piecesToBoardString = function() {
@@ -333,19 +369,25 @@ CMGPosition = (function() {
 
 CMGMove = (function() {
 
-  function CMGMove(from, to, newPosition, castling, taken) {
-    this.from = from;
-    this.to = to;
+  function CMGMove(fromSquare, fromPiece, toSquare, toPiece, newPosition, castling, takenPiece, takenOnSquare) {
+    this.fromSquare = fromSquare;
+    this.fromPiece = fromPiece;
+    this.toSquare = toSquare;
+    this.toPiece = toPiece;
     this.newPosition = newPosition;
     this.castling = castling != null ? castling : false;
-    this.taken = taken != null ? taken : false;
+    this.takenPiece = takenPiece != null ? takenPiece : false;
+    this.takenOnSquare = takenOnSquare != null ? takenOnSquare : false;
     /*
             Constructor
-            @param from (CMGPieceOnSquare)
-            @param to (CMGPieceOnSquare)
+            @param fromSquare (integer)
+            @param fromPiece (CMGPiece)
+            @param toSquare (integer)
+            @param toPiece (CMGPiece)
             @param newPosition (CMGPosition)
-            @param castling (false|"queen"|"king")
-            @param taken (false|CMGPieceOnSquare)
+            @param castling (false|"q"|"k")
+            @param takenPiece (false|CMGPiece)
+            @param takenOnSquare (false|integer)
     */
   }
 
