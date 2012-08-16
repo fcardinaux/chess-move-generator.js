@@ -232,11 +232,48 @@ CMGPosition = (function() {
 
   CMGPosition.prototype.isValidMove = function(fromSquare, toSquare, promotion) {
     if (promotion == null) promotion = false;
-    return 'todo implement';
+    return true;
   };
 
-  CMGPosition.prototype.allPossibleMovesFromSquare = function(_) {
-    return [];
+  CMGPosition.prototype.allPossibleMovesFromSquare = function(squareKey) {
+    var nonTakingMoves, out, piece, pseudoMove, pseudoMoves, shadowDirections, shadows, _i, _len;
+    pseudoMoves = [];
+    piece = this._getPieceOnSquare(squareKey);
+    if (!piece) return [];
+    if (piece.color !== this.turn) return [];
+    switch (piece.type) {
+      case 'r':
+        shadows = this._computeShadows(squareKey, [0, 2, 4, 6], this.turn);
+        pseudoMoves = CMGPosition.ROOK_MOVES[squareKey] & ~shadows;
+        break;
+      case 'n':
+        pseudoMoves = CMGPosition.KNIGHT_MOVES[squareKey] & ~this.bitBoards.allPiecesOfColor[this.turn];
+        break;
+      case 'b':
+        shadows = this._computeShadows(squareKey, [1, 3, 5, 7], this.turn);
+        pseudoMoves = CMGPosition.BISHOP_MOVES[squareKey] & ~shadows;
+        break;
+      case 'q':
+        shadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
+        pseudoMoves = CMGPosition.QUEEN_MOVES[squareKey] & ~shadows;
+        break;
+      case 'k':
+        shadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
+        pseudoMoves = CMGPosition.KING_MOVES_WITHOUT_CASTLING[squareKey] & ~shadows;
+        break;
+      case 'p':
+        if (this.turn === 'w') shadowDirections = [0];
+        if (this.turn === 'b') shadowDirections = [4];
+        shadows = this._computeShadows(squareKey, shadowDirections, this.turn);
+        nonTakingMoves = CMGPosition.PAWN_NON_TAKING_MOVES[squareKey] & ~shadows;
+        pseudoMoves = CMGPosition.PAWN_TAKING_MOVES[squareKey].concat(nonTakingMoves);
+    }
+    out = [];
+    for (_i = 0, _len = pseudoMoves.length; _i < _len; _i++) {
+      pseudoMove = pseudoMoves[_i];
+      if (this._isValidMoveObject(pseudoMove)) out.push(pseudoMove);
+    }
+    return out;
   };
 
   CMGPosition.prototype.allPossibleMoves = function() {
@@ -264,6 +301,13 @@ CMGPosition = (function() {
             Get the winner color code
             @return (false|'b'|'w')
     */    return 'todo';
+  };
+
+  CMGPosition.prototype._isValidMoveObject = function(move) {
+    var promotion;
+    promotion = false;
+    if (move.toPiece !== move.fromPiece) promotion = move.toPiece;
+    return this.isValidMove(move.fromSquare, move.toSquare, promotion);
   };
 
   CMGPosition.prototype._piecesToBoardString = function() {
@@ -322,6 +366,7 @@ CMGPosition = (function() {
   CMGPosition.prototype._generateBitBoards = function() {
     var bvs, color, square, type, _ref, _ref2, _results;
     this.bitBoards.allPieces = 0x0;
+    this.bitBoards.allPiecesOfColor = 0x0;
     this.bitBoards.allPiecesOfColorAndType = {
       'b': {
         'r': 0x0,
@@ -346,6 +391,7 @@ CMGPosition = (function() {
       _ref2 = _ref[square], color = _ref2.color, type = _ref2.type;
       bvs = this._bitValueOfSquare(square);
       this.bitBoards.allPieces |= bvs;
+      this.bitBoards.allPiecesOfColor[color] |= bvs;
       _results.push(this.bitBoards.allPiecesOfColorAndType[color][type] |= bvs);
     }
     return _results;
@@ -384,7 +430,7 @@ CMGMove = (function() {
   }
 
   CMGMove.prototype.toString = function() {
-    throw "Todo: implement";
+    return CMGPosition._squareToString(fromSquare) + CMGPosition._squareToString(toSquare);
   };
 
   return CMGMove;
