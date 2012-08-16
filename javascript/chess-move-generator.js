@@ -78,6 +78,9 @@ Numbering of each bitboard quadrant (hexadecimal here)
       A   B   C   D
 
 
+Todos:
+* Operations of loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves and loadShadows can be done in one loop block
+
 Definitions:
 
 * "Pseudo-legal moves are all moves that follows the basic move rules.
@@ -85,7 +88,7 @@ Definitions:
   But it might leave the own king in check, castle while in check
   or castle over a checked square." ( -> Jonatan Pettersson's Move generation)
 */
-var CMGMove, CMGPiece, CMGPosition, bishopBitBoardStringArray, bitBoardStringArrayToIntegers, kingBitBoardStringArray, knightBitBoardStringArray, loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves, pawnMoveBitBoardStringArray, pawnStartingMoveBitBoardStringArray, pawnTakeBitBoardStringArray, queenBitBoardStringArray, rookBitBoardStringArray;
+var CMGMove, CMGPiece, CMGPosition, bishopBitBoardStringArray, bitBoardStringArrayToIntegers, kingBitBoardStringArray, knightBitBoardStringArray, loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves, loadShadows, pawnMoveBitBoardStringArray, pawnStartingMoveBitBoardStringArray, pawnTakeBitBoardStringArray, queenBitBoardStringArray, rookBitBoardStringArray, shadow_E_BitBoardStringArray, shadow_NE_BitBoardStringArray, shadow_NW_BitBoardStringArray, shadow_N_BitBoardStringArray, shadow_SE_BitBoardStringArray, shadow_SW_BitBoardStringArray, shadow_S_BitBoardStringArray, shadow_W_BitBoardStringArray;
 
 queenBitBoardStringArray = ['100000010000001', '010000010000010', '001000010000100', '000100010001000', '000010010010000', '000001010100000', '000000111000000', '111111101111111', '000000111000000', '000001010100000', '000010010010000', '000100010001000', '001000010000100', '010000010000010', '100000010000001'];
 
@@ -102,6 +105,22 @@ pawnMoveBitBoardStringArray = ['000000000000000', '000000000000000', '0000000000
 pawnStartingMoveBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
 
 pawnTakeBitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000101000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+shadow_NW_BitBoardStringArray = ['100000000000000', '010000000000000', '001000000000000', '000100000000000', '000010000000000', '000001000000000', '000000100000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+shadow_SW_BitBoardStringArray = shadow_NW_BitBoardStringArray.reverse();
+
+shadow_N_BitBoardStringArray = ['000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+shadow_S_BitBoardStringArray = shadow_N_BitBoardStringArray.reverse();
+
+shadow_NE_BitBoardStringArray = ['000000000000001', '000000000000010', '000000000000100', '000000000001000', '000000000010000', '000000000100000', '000000001000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+shadow_SE_BitBoardStringArray = shadow_NE_BitBoardStringArray.reverse();
+
+shadow_W_BitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '111111110000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
+
+shadow_E_BitBoardStringArray = ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000011111111', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'];
 
 bitBoardStringArrayToIntegers = function(bitBoardStringArray, offsetY, offsetX) {
   var bottomLeft, bottomRight, line, lineId, line_16_8, rectangle_16_8, square_8_8, start, topLeft, topRight, _i, _len, _len2;
@@ -128,11 +147,18 @@ bitBoardStringArrayToIntegers = function(bitBoardStringArray, offsetY, offsetX) 
 };
 
 loadMoves = function(bitBoardStringArray) {
-  return [bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 7, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 6, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 5, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 4, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 3, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 2, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 1, 0), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 7), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 6), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 5), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 4), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 3), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 2), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 1), bitBoardStringArrayToIntegers(bitBoardStringArray, 0, 0)];
+  var iCol, iRow, out;
+  out = [];
+  for (iRow = 7; iRow >= 0; iRow--) {
+    for (iCol = 7; iCol >= 0; iCol--) {
+      out.push(bitBoardStringArrayToIntegers(bitBoardStringArray, iRow, iCol));
+    }
+  }
+  return out;
 };
 
 loadPawnNonTakingMoves = function(color) {
-  var arrayOp, ordinaryMoveArr, row2MoveArr, row7MoveArr;
+  var arrayOp, iCol, iRow, ordinaryMoveArr, out, row2MoveArr, row7MoveArr;
   if (color === 'w') {
     arrayOp = function(arr) {
       return arr;
@@ -150,11 +176,26 @@ loadPawnNonTakingMoves = function(color) {
     row2MoveArr = arrayOp(pawnStartingMoveBitBoardStringArray);
     row7MoveArr = arrayOp(pawnMoveBitBoardStringArray);
   }
-  return [bitBoardStringArrayToIntegers(row2MoveArr, 6, 7), bitBoardStringArrayToIntegers(row2MoveArr, 6, 6), bitBoardStringArrayToIntegers(row2MoveArr, 6, 5), bitBoardStringArrayToIntegers(row2MoveArr, 6, 4), bitBoardStringArrayToIntegers(row2MoveArr, 6, 3), bitBoardStringArrayToIntegers(row2MoveArr, 6, 2), bitBoardStringArrayToIntegers(row2MoveArr, 6, 1), bitBoardStringArrayToIntegers(row2MoveArr, 6, 0), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 7), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 6), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 5), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 4), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 3), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 2), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 1), bitBoardStringArrayToIntegers(ordinaryMoveArr, 5, 0), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 7), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 6), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 5), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 4), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 3), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 2), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 1), bitBoardStringArrayToIntegers(ordinaryMoveArr, 4, 0), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 7), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 6), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 5), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 4), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 3), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 2), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 1), bitBoardStringArrayToIntegers(ordinaryMoveArr, 3, 0), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 7), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 6), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 5), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 4), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 3), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 2), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 1), bitBoardStringArrayToIntegers(ordinaryMoveArr, 2, 0), bitBoardStringArrayToIntegers(row7MoveArr, 1, 7), bitBoardStringArrayToIntegers(row7MoveArr, 1, 6), bitBoardStringArrayToIntegers(row7MoveArr, 1, 5), bitBoardStringArrayToIntegers(row7MoveArr, 1, 4), bitBoardStringArrayToIntegers(row7MoveArr, 1, 3), bitBoardStringArrayToIntegers(row7MoveArr, 1, 2), bitBoardStringArrayToIntegers(row7MoveArr, 1, 1), bitBoardStringArrayToIntegers(row7MoveArr, 1, 0)];
+  out = [];
+  for (iRow = 6; iRow >= 1; iRow--) {
+    for (iCol = 7; iCol >= 0; iCol--) {
+      switch (iRow) {
+        case 6:
+          out.push(bitBoardStringArrayToIntegers(row2MoveArr, iRow, iCol));
+          break;
+        case 1:
+          out.push(bitBoardStringArrayToIntegers(row7MoveArr, iRow, iCol));
+          break;
+        default:
+          out.push(bitBoardStringArrayToIntegers(ordinaryMoveArr, iRow, iCol));
+      }
+    }
+  }
+  return out;
 };
 
 loadPawnTakingMoves = function(color) {
-  var arrayOp, takingMoveArr;
+  var arrayOp, iCol, iRow, out, takingMoveArr;
   if (color === 'w') {
     arrayOp = function(arr) {
       return arr;
@@ -165,7 +206,27 @@ loadPawnTakingMoves = function(color) {
     };
   }
   takingMoveArr = arrayOp(pawnTakeBitBoardStringArray);
-  return [bitBoardStringArrayToIntegers(takingMoveArr, 6, 7), bitBoardStringArrayToIntegers(takingMoveArr, 6, 6), bitBoardStringArrayToIntegers(takingMoveArr, 6, 5), bitBoardStringArrayToIntegers(takingMoveArr, 6, 4), bitBoardStringArrayToIntegers(takingMoveArr, 6, 3), bitBoardStringArrayToIntegers(takingMoveArr, 6, 2), bitBoardStringArrayToIntegers(takingMoveArr, 6, 1), bitBoardStringArrayToIntegers(takingMoveArr, 6, 0), bitBoardStringArrayToIntegers(takingMoveArr, 5, 7), bitBoardStringArrayToIntegers(takingMoveArr, 5, 6), bitBoardStringArrayToIntegers(takingMoveArr, 5, 5), bitBoardStringArrayToIntegers(takingMoveArr, 5, 4), bitBoardStringArrayToIntegers(takingMoveArr, 5, 3), bitBoardStringArrayToIntegers(takingMoveArr, 5, 2), bitBoardStringArrayToIntegers(takingMoveArr, 5, 1), bitBoardStringArrayToIntegers(takingMoveArr, 5, 0), bitBoardStringArrayToIntegers(takingMoveArr, 4, 7), bitBoardStringArrayToIntegers(takingMoveArr, 4, 6), bitBoardStringArrayToIntegers(takingMoveArr, 4, 5), bitBoardStringArrayToIntegers(takingMoveArr, 4, 4), bitBoardStringArrayToIntegers(takingMoveArr, 4, 3), bitBoardStringArrayToIntegers(takingMoveArr, 4, 2), bitBoardStringArrayToIntegers(takingMoveArr, 4, 1), bitBoardStringArrayToIntegers(takingMoveArr, 4, 0), bitBoardStringArrayToIntegers(takingMoveArr, 3, 7), bitBoardStringArrayToIntegers(takingMoveArr, 3, 6), bitBoardStringArrayToIntegers(takingMoveArr, 3, 5), bitBoardStringArrayToIntegers(takingMoveArr, 3, 4), bitBoardStringArrayToIntegers(takingMoveArr, 3, 3), bitBoardStringArrayToIntegers(takingMoveArr, 3, 2), bitBoardStringArrayToIntegers(takingMoveArr, 3, 1), bitBoardStringArrayToIntegers(takingMoveArr, 3, 0), bitBoardStringArrayToIntegers(takingMoveArr, 2, 7), bitBoardStringArrayToIntegers(takingMoveArr, 2, 6), bitBoardStringArrayToIntegers(takingMoveArr, 2, 5), bitBoardStringArrayToIntegers(takingMoveArr, 2, 4), bitBoardStringArrayToIntegers(takingMoveArr, 2, 3), bitBoardStringArrayToIntegers(takingMoveArr, 2, 2), bitBoardStringArrayToIntegers(takingMoveArr, 2, 1), bitBoardStringArrayToIntegers(takingMoveArr, 2, 0), bitBoardStringArrayToIntegers(takingMoveArr, 1, 7), bitBoardStringArrayToIntegers(takingMoveArr, 1, 6), bitBoardStringArrayToIntegers(takingMoveArr, 1, 5), bitBoardStringArrayToIntegers(takingMoveArr, 1, 4), bitBoardStringArrayToIntegers(takingMoveArr, 1, 3), bitBoardStringArrayToIntegers(takingMoveArr, 1, 2), bitBoardStringArrayToIntegers(takingMoveArr, 1, 1), bitBoardStringArrayToIntegers(takingMoveArr, 1, 0)];
+  out = [];
+  for (iRow = 6; iRow >= 1; iRow--) {
+    for (iCol = 7; iCol >= 0; iCol--) {
+      out.push(bitBoardStringArrayToIntegers(takingMoveArr, iRow, iCol));
+    }
+  }
+  return out;
+};
+
+loadShadows = function() {
+  var fcts, iCol, iDirection, iRow, out;
+  fcts = [shadow_N_BitBoardStringArray, shadow_NE_BitBoardStringArray, shadow_E_BitBoardStringArray, shadow_SE_BitBoardStringArray, shadow_S_BitBoardStringArray, shadow_SW_BitBoardStringArray, shadow_W_BitBoardStringArray, shadow_NW_BitBoardStringArray];
+  out = [];
+  for (iRow = 7; iRow >= 0; iRow--) {
+    for (iCol = 7; iCol >= 0; iCol--) {
+      for (iDirection = 0; iDirection <= 7; iDirection++) {
+        out.push(bitBoardStringArrayToIntegers(fcts[iDirection], iRow, iCol));
+      }
+    }
+  }
+  return out;
 };
 
 CMGPosition = (function() {
@@ -208,6 +269,14 @@ CMGPosition = (function() {
   CMGPosition.PAWN_TAKING_MOVES = {
     b: loadPawnTakingMoves('b'),
     w: loadPawnTakingMoves('w')
+  };
+
+  CMGPosition.SHADOWS = loadShadows();
+
+  CMGPosition._shadow = function(direction) {};
+
+  CMGPosition._light = function(direction) {
+    return this._shadow(direction ^ 4);
   };
 
   CMGPosition.fromString = function(positionString) {
