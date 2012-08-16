@@ -472,6 +472,7 @@ bitBoardStringArrayToIntegers = (bitBoardStringArray, offsetY, offsetX, trace = 
             bottomRight.push(line.substr(4))
 
     # Finally, return the four quadrants as an array of four integers
+    # * note that strings constitute the "simplest" way of representing binary numbers in JS
     out = [
         parseInt(bottomLeft.join(''), 2),
         parseInt(bottomRight.join(''), 2),

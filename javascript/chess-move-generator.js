@@ -29,32 +29,12 @@ CMGPosition = (function() {
 
   CMGPosition.CASTLING_BLACK_QUEEN = 1;
 
-  CMGPosition.QUEEN_MOVES = loadMoves(queenBitBoardStringArray);
-
-  CMGPosition.ROOK_MOVES = loadMoves(rookBitBoardStringArray);
-
-  CMGPosition.BISHOP_MOVES = loadMoves(bishopBitBoardStringArray);
-
-  CMGPosition.KNIGHT_MOVES = loadMoves(knightBitBoardStringArray);
-
-  CMGPosition.KING_MOVES_WITHOUT_CASTLING = loadMoves(kingBitBoardStringArray);
-
-  CMGPosition.PAWN_NON_TAKING_MOVES = {
-    b: loadPawnNonTakingMoves('b'),
-    w: loadPawnNonTakingMoves('w')
+  CMGPosition._shadow = function(square, direction) {
+    return this.SHADOWS[square][direction];
   };
 
-  CMGPosition.PAWN_TAKING_MOVES = {
-    b: loadPawnTakingMoves('b'),
-    w: loadPawnTakingMoves('w')
-  };
-
-  CMGPosition.SHADOWS = loadShadows();
-
-  CMGPosition._shadow = function(direction) {};
-
-  CMGPosition._light = function(direction) {
-    return this._shadow(direction ^ 4);
+  CMGPosition._light = function(square, direction) {
+    return this.SHADOWS[square][direction ^ 4];
   };
 
   CMGPosition.fromString = function(positionString) {
