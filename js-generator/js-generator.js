@@ -7,9 +7,9 @@
 // ---------------------------------------------------------------------------------------------------------------------
 // Generate the script
 
-var fileSystemAPI = require('fs'),
-    bitBoardGenerator = require('../javascript/bitboard-generator'),
-    scriptLines = bitBoardGenerator.generateJavascriptLines('CMGJS', 'Generated chess bitboards - copyright 2012 François Cardinaux, Genève');
+var fileSystemAPI = require( 'fs' ),
+    bitBoardGenerator = require( './bitboard-generator' ),
+    scriptLines = bitBoardGenerator.generateJavascriptLines('CMGPosition.', 'Generated chess bitboards - copyright 2012 François Cardinaux, Genève');
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Write the script to a file

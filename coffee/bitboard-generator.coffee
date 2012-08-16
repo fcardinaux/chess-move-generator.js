@@ -402,32 +402,32 @@ module.exports.generateJavascriptLines = (dataPrefix, headerLine = '') ->
         lines.push("// #{headerLine}")
 
     moves = loadMoves(queenBitBoardStringArray)
-    lines.push("#{dataPrefix}_QUEEN_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{dataPrefix}QUEEN_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(rookBitBoardStringArray)
-    lines.push("#{dataPrefix}_ROOK_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{dataPrefix}ROOK_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(bishopBitBoardStringArray)
-    lines.push("#{dataPrefix}_BISHOP_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{dataPrefix}BISHOP_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(knightBitBoardStringArray)
-    lines.push("#{dataPrefix}_KNIGHT_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{dataPrefix}KNIGHT_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(kingBitBoardStringArray)
-    lines.push("#{dataPrefix}_KING_MOVES_WITHOUT_CASTLING = #{quadrantRepresentation(moves)};")
+    lines.push("#{dataPrefix}KING_MOVES_WITHOUT_CASTLING = #{quadrantRepresentation(moves)};")
 
     moves =
         b: loadPawnNonTakingMoves('b')
         w: loadPawnNonTakingMoves('w')
-    lines.push("#{dataPrefix}_PAWN_NON_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
+    lines.push("#{dataPrefix}PAWN_NON_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
 
     moves =
         b: loadPawnTakingMoves('b')
         w: loadPawnTakingMoves('w')
-    lines.push("#{dataPrefix}_PAWN_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
+    lines.push("#{dataPrefix}PAWN_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
 
     shadows = loadShadows()
-    lines.push("#{dataPrefix}_SHADOWS = #{quadrantRepresentation(shadows)};")
+    lines.push("#{dataPrefix}SHADOWS = #{quadrantRepresentation(shadows)};")
 
     return lines
 
