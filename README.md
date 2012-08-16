@@ -31,7 +31,8 @@ For the algorithm:
 
 Bitboard algorithm:
 
-* http://en.wikipedia.org/wiki/Bitboard
+* [Bitboard on Wikipedia](http://en.wikipedia.org/wiki/Bitboard)
+* [Working with large integers in JavaScript](http://www.2ality.com/2012/07/large-integers.html)
 
 For debugging and tests:
 

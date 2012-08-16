@@ -12,31 +12,31 @@ Short reminder of ASCII:
     Z           90
     a           97
 
-The board and the square codes in 0x88 representation:
+The board and the square codes (note that we don't use the 0x88 representation here, because of the bitboards):
     * decimal value
     * octal value
 
     +-----+-----+-----+-----+-----+-----+-----+-----+
-   8| 112 | 113 | 114 | 115 | 116 | 117 | 118 | 119 |
-    | 160 | 161 | 162 | 163 | 164 | 165 | 166 | 167 |
+   8|  56 |  57 |  58 |  59 |  60 |  61 |  62 |  63 |
+    |  70 |  71 |  72 |  73 |  74 |  75 |  76 |  77 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
-   7|  96 |  97 |  98 |  99 | 100 | 101 | 102 | 103 |
-    | 140 | 141 | 142 | 143 | 144 | 145 | 146 | 147 |
-    +-----+-----+-----+-----+-----+-----+-----+-----+
-   6|  80 |  81 |  82 |  83 |  84 |  85 |  86 |  87 |
-    | 120 | 121 | 122 | 123 | 124 | 125 | 126 | 127 |
-    +-----+-----+-----+-----+-----+-----+-----+-----+
-   5|  64 |  65 |  66 |  67 |  68 |  69 |  70 |  71 |
-    | 100 | 101 | 102 | 103 | 104 | 105 | 106 | 107 |
-    +-----+-----+-----+-----+-----+-----+-----+-----+
-   4|  48 |  49 |  50 |  51 |  52 |  53 |  54 |  55 |
+   7|  48 |  49 |  50 |  51 |  52 |  53 |  54 |  55 |
     |  60 |  61 |  62 |  63 |  64 |  65 |  66 |  67 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
-   3|  32 |  33 |  34 |  35 |  36 |  37 |  38 |  39 |
+   6|  80 |  81 |  82 |  83 |  84 |  85 |  86 |  87 |
+    |  50 |  51 |  52 |  53 |  54 |  55 |  56 |  57 |
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+   5|  32 |  33 |  34 |  35 |  36 |  37 |  38 |  39 |
     |  40 |  41 |  42 |  43 |  44 |  45 |  46 |  47 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
-   2|  16 |  17 |  18 |  19 |  20 |  21 |  22 |  23 |
+   4|  24 |  25 |  26 |  27 |  28 |  29 |  30 |  31 |
+    |  30 |  31 |  32 |  33 |  34 |  35 |  36 |  37 |
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+   3|  16 |  17 |  18 |  19 |  20 |  21 |  22 |  23 |
     |  20 |  21 |  22 |  23 |  24 |  25 |  26 |  27 |
+    +-----+-----+-----+-----+-----+-----+-----+-----+
+   2|   8 |   9 |  10 |  11 |  12 |  13 |  14 |  15 |
+    |  10 |  11 |  12 |  13 |  14 |  15 |  16 |  17 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
    1|   0 |   1 |   2 |   3 |   4 |   5 |   6 |   7 |
     |   0 |   1 |   2 |   3 |   4 |   5 |   6 |   7 |
@@ -78,6 +78,9 @@ Numbering of each bitboard quadrant (hexadecimal here)
       A   B   C   D
 
 
+Todos:
+* Operations of loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves and loadShadows can be done in one loop block
+
 Definitions:
 
 * "Pseudo-legal moves are all moves that follows the basic move rules.
@@ -86,7 +89,10 @@ Definitions:
   or castle over a checked square." ( -> Jonatan Pettersson's Move generation)
 ###
 
-queenBitBoardStringArrays = [
+# =============================================================================
+# Movements of the different piece types
+
+queenBitBoardStringArray = [
     '100000010000001',
     '010000010000010',
     '001000010000100',
@@ -176,25 +182,7 @@ kingBitBoardStringArray = [
     '000000000000000'
 ]
 
-blackPawnMoveBitBoardStringArray = [
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000010000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000'
-]
-
-whitePawnMoveBitBoardStringArray = [
+pawnMoveBitBoardStringArray = [
     '000000000000000',
     '000000000000000',
     '000000000000000',
@@ -212,25 +200,7 @@ whitePawnMoveBitBoardStringArray = [
     '000000000000000'
 ]
 
-blackPawnStartingMoveBitBoardStringArray = [
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000010000000',
-    '000000010000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000'
-]
-
-whitePawnStartingMoveBitBoardStringArray = [
+pawnStartingMoveBitBoardStringArray = [
     '000000000000000',
     '000000000000000',
     '000000000000000',
@@ -248,25 +218,7 @@ whitePawnStartingMoveBitBoardStringArray = [
     '000000000000000'
 ]
 
-blackPawnTakeBitBoardStringArray = [
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000101000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000'
-]
-
-whitePawnTakeBitBoardStringArray = [
+pawnTakeBitBoardStringArray = [
     '000000000000000',
     '000000000000000',
     '000000000000000',
@@ -283,6 +235,108 @@ whitePawnTakeBitBoardStringArray = [
     '000000000000000',
     '000000000000000'
 ]
+
+# =============================================================================
+# Eight different shadows
+
+shadow_NW_BitBoardStringArray = [
+    '100000000000000',
+    '010000000000000',
+    '001000000000000',
+    '000100000000000',
+    '000010000000000',
+    '000001000000000',
+    '000000100000000',
+    '000000010000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+shadow_SW_BitBoardStringArray = shadow_NW_BitBoardStringArray.reverse()
+
+shadow_N_BitBoardStringArray = [
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000010000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+shadow_S_BitBoardStringArray = shadow_N_BitBoardStringArray.reverse()
+
+shadow_NE_BitBoardStringArray = [
+    '000000000000001',
+    '000000000000010',
+    '000000000000100',
+    '000000000001000',
+    '000000000010000',
+    '000000000100000',
+    '000000001000000',
+    '000000010000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+shadow_SE_BitBoardStringArray = shadow_NE_BitBoardStringArray.reverse()
+
+shadow_W_BitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '111111110000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+shadow_E_BitBoardStringArray = [
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000011111111',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000',
+    '000000000000000'
+]
+
+# =============================================================================
+# Load actual movement bitboards
 
 bitBoardStringArrayToIntegers = (bitBoardStringArray, offsetY, offsetX) ->
     # First, determine the 8x8 square that represents the bitboard
@@ -313,96 +367,89 @@ bitBoardStringArrayToIntegers = (bitBoardStringArray, offsetY, offsetX) ->
     ]
 
 loadMoves = (bitBoardStringArray) ->
-    [
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 7 ), # A1
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 7, 0 ), # H1
+    out = []
 
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 7 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 6, 0 ),
+    for iRow in [7..0]      # 1 .. 8
+        for iCol in [7..0]  # A .. H
+            out.push(bitBoardStringArrayToIntegers( bitBoardStringArray, iRow, iCol ))
 
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 7 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 5, 0 ),
+    return out
 
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 7 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 4, 0 ),
+loadPawnNonTakingMoves = (color) ->
+    if color is 'w'
+        arrayOp = (arr) -> arr
+    else
+        arrayOp = (arr) -> arr.reverse()
 
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 7 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 3, 0 ),
+    ordinaryMoveArr = arrayOp(pawnMoveBitBoardStringArray)
+    if color is 'b'
+        row2MoveArr = arrayOp(pawnMoveBitBoardStringArray)
+        row7MoveArr = arrayOp(pawnStartingMoveBitBoardStringArray)
+    else
+        row2MoveArr = arrayOp(pawnStartingMoveBitBoardStringArray)
+        row7MoveArr = arrayOp(pawnMoveBitBoardStringArray)
 
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 7 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 2, 0 ),
+    out = []
 
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 7 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 1, 0 ),
+    for iRow in [6..1]      # 2 .. 7
+        for iCol in [7..0]  # A .. H
+            switch iRow
+                when 6 then out.push(bitBoardStringArrayToIntegers( row2MoveArr, iRow, iCol ))
+                when 1 then out.push(bitBoardStringArrayToIntegers( row7MoveArr, iRow, iCol ))
+                else        out.push(bitBoardStringArrayToIntegers( ordinaryMoveArr, iRow, iCol ))
 
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 7 ), # A8
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 6 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 5 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 4 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 3 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 2 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 1 ),
-        bitBoardStringArrayToIntegers( bitBoardStringArray, 0, 0 )  # H8
-        ]
+    return out
 
+loadPawnTakingMoves = (color) ->
+    if color is 'w'
+        arrayOp = (arr) -> arr
+    else
+        arrayOp = (arr) -> arr.reverse()
+
+    takingMoveArr = arrayOp(pawnTakeBitBoardStringArray)
+
+    out = []
+
+    for iRow in [6..1]      # 2 .. 7
+        for iCol in [7..0]  # A .. H
+            out.push(bitBoardStringArrayToIntegers( takingMoveArr, iRow, iCol ))
+
+    return out
+
+# =============================================================================
+# Load actual shadow and light bitboards
+
+loadShadows = () ->
+    fcts = [
+        shadow_N_BitBoardStringArray,
+        shadow_NE_BitBoardStringArray,
+        shadow_E_BitBoardStringArray,
+        shadow_SE_BitBoardStringArray,
+        shadow_S_BitBoardStringArray,
+        shadow_SW_BitBoardStringArray,
+        shadow_W_BitBoardStringArray,
+        shadow_NW_BitBoardStringArray
+    ]
+
+    out = []
+
+    for iRow in [7..0]      # 1 .. 8
+        for iCol in [7..0]  # A .. H
+            for iDirection in [0..7]
+                out.push(bitBoardStringArrayToIntegers( fcts[iDirection], iRow, iCol ))
+
+    return out
+
+
+# =============================================================================
 
 class CMGPosition
-    # Noticeable values in 0x88 representation:
-    @ROW_SPAN:             16
-    @MOVE_UP:              16
-    @MOVE_UP_LEFT:         15
-    @MOVE_UP_RIGHT:        17
-    @MOVE_UP_2:            32
-    @MOVE_DOWN:           -16
-    @MOVE_DOWN_LEFT:      -17
-    @MOVE_DOWN_RIGHT:     -15
-    @MOVE_DOWN_2:         -32
+    # Noticeable values:
+    @ROW_SPAN:              8
     @BOTTOM_LEFT_CORNER:    0
     @BOTTOM_RIGHT_CORNER:   7
-    @TOP_LEFT_CORNER:     112
-    @TOP_RIGHT_CORNER:    119
+    @TOP_LEFT_CORNER:       070
+    @TOP_RIGHT_CORNER:      077
 
     # Internal encoding for castling:
     @CASTLING_ALL:         15
@@ -422,6 +469,21 @@ class CMGPosition
     # * kings: ordinary moves (castling done separately)
     @KING_MOVES_WITHOUT_CASTLING: loadMoves(kingBitBoardStringArray)
     # * pawns: all ordinary moves, all 2-square initial moves, all promotions
+    @PAWN_NON_TAKING_MOVES:
+        b: loadPawnNonTakingMoves('b')
+        w: loadPawnNonTakingMoves('w')
+    @PAWN_TAKING_MOVES:
+        b: loadPawnTakingMoves('b')
+        w: loadPawnTakingMoves('w')
+
+    @SHADOWS: loadShadows()
+
+    @_shadow: (direction) ->
+        # @param direction (int): 0 = north, 1 = north-east, ..., 7 = north-west (i.e. clockwise)
+
+    @_light: (direction) ->
+        # @param direction (int): 0 = north, 1 = north-east, ..., 7 = north-west (i.e. clockwise)
+        @_shadow(direction ^ 4) # ^ = xor
 
     # -------------------------------------------------------------------------
     # Public functions of class (comparable to static methods)
@@ -551,7 +613,7 @@ class CMGPosition
         @param pieces ([CMGPiece])
         @param turn (false|"b"|"w")
         @param allowedCastling (integer)
-        @param enPassantSquare (false|integer where integer is between 0 (bottom right corner) an 119 (top right corner in 0x88 representation)
+        @param enPassantSquare (false|integer where integer is between 0 (bottom right corner) and 077 (top right corner)
         @param halfMoveClock (integer)
         @param moveNumber (integer)
         ###
@@ -666,8 +728,8 @@ class CMGPosition
         return @_squareToString(squareNumber)
 
     _squareToString: (squareNumber) ->
-        rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN) # 0x88 representation
-        colValue = squareNumber % CMGPosition.ROW_SPAN # 0x88 representation
+        rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN)
+        colValue = squareNumber % CMGPosition.ROW_SPAN
 
         String.fromCharCode(colValue + 97) + String.fromCharCode(rowValue + 49) # 97 is 'a', 49 is '1'
 
@@ -698,23 +760,7 @@ class CMGPosition
             @bitBoards.allPiecesOfColorAndType[color][type] |= bvs
 
     _bitValueOfSquare: (square) ->
-        # All these tests are necessary because of the 0x88 representation
-        if square < 0x20
-            return Math.pow(2, square)
-        else if square < 0x40
-            return Math.pow(2, square - 0x10)
-        else if square < 0x60
-            return Math.pow(2, square - 0x20)
-        else if square < 0x100
-            return Math.pow(2, square - 0x30)
-        else if square < 0x120
-            return Math.pow(2, square - 0x40)
-        else if square < 0x140
-            return Math.pow(2, square - 0x50)
-        else if square < 0x160
-            return Math.pow(2, square - 0x60)
-        else
-            return Math.pow(2, square - 0x70)
+        return Math.pow(2, square)
 
 # =============================================================================
 
