@@ -134,7 +134,7 @@ module.exports =
             calculatedMoves = positionObj.allPossibleMoves()
             calculatedEndPositionStrings = []
             for calculatedMove in calculatedMoves
-                calculatedEndPositionStrings.push(calculatedMove.newPosition)
+                calculatedEndPositionStrings.push( calculatedMove.newPosition.toString() )
             result = compareArrays expectedEndPositionStrings, calculatedEndPositionStrings
 
             assert.eql([[], []], result)

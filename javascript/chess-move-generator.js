@@ -5,7 +5,57 @@ Chess Move Generator
 
 Licence: see README.md
 */
-var CMGMove, CMGPiece, CMGPosition;
+var CMGBitBoard, CMGMove, CMGPiece, CMGPosition;
+
+CMGBitBoard = (function() {
+
+  function CMGBitBoard() {}
+
+  CMGBitBoard.EMPTY_BOARD = [0, 0, 0, 0];
+
+  CMGBitBoard.binAnd = function(bb1, bb2) {
+    return [bb1[0] & bb2[0], bb1[1] & bb2[1], bb1[2] & bb2[2], bb1[3] & bb2[3]];
+  };
+
+  CMGBitBoard.binOr = function(bb1, bb2) {
+    return [bb1[0] | bb2[0], bb1[1] | bb2[1], bb1[2] | bb2[2], bb1[3] | bb2[3]];
+  };
+
+  CMGBitBoard.binXor = function(bb1, bb2) {
+    return [bb1[0] ^ bb2[0], bb1[1] ^ bb2[1], bb1[2] ^ bb2[2], bb1[3] ^ bb2[3]];
+  };
+
+  CMGBitBoard.binNot = function(bb) {
+    return [~bb[0], ~bb[1], ~bb[2], ~bb[3]];
+  };
+
+  CMGBitBoard.binLeftShift = function(bb, n) {
+    var carry, qKey, res, shiftedBb;
+    res = [];
+    carry = 0;
+    for (qKey = 0; qKey <= 3; qKey++) {
+      shiftedBb = (bb[qKey] << n) + carry;
+      res[qKey] = shiftedBb & 0xff;
+      carry = shiftedBb >> 8;
+    }
+    return res;
+  };
+
+  CMGBitBoard.bitBoardToSquareKeyArray = function(bitBoard) {
+    var key, qid, quadrant, squareKeys, _len;
+    squareKeys = [];
+    for (qid = 0, _len = bitBoard.length; qid < _len; qid++) {
+      quadrant = bitBoard[qid];
+      for (key = 0; key <= 15; key++) {
+        if ((1 << key) & quadrant) squareKeys.push(qid * 16 + key);
+      }
+    }
+    return squareKeys;
+  };
+
+  return CMGBitBoard;
+
+})();
 
 CMGPosition = (function() {
 
@@ -19,22 +69,34 @@ CMGPosition = (function() {
 
   CMGPosition.TOP_RIGHT_CORNER = 077;
 
-  CMGPosition.CASTLING_ALL = 15;
+  CMGPosition.CASTLING_CODE_ALL = 15;
 
-  CMGPosition.CASTLING_WHITE_KING = 8;
+  CMGPosition.CASTLING_CODE_WHITE_KING = 8;
 
-  CMGPosition.CASTLING_WHITE_QUEEN = 4;
+  CMGPosition.CASTLING_CODE_WHITE_QUEEN = 4;
 
-  CMGPosition.CASTLING_BLACK_KING = 2;
+  CMGPosition.CASTLING_CODE_BLACK_KING = 2;
 
-  CMGPosition.CASTLING_BLACK_QUEEN = 1;
+  CMGPosition.CASTLING_CODE_BLACK_QUEEN = 1;
 
-  CMGPosition._shadow = function(square, direction) {
-    return this.SHADOWS[square][direction];
+  CMGPosition.CASTLING_WHITE_KING = {
+    move: [64, 0, 0, 0],
+    mustBeEmpty: [96, 0, 0, 0]
   };
 
-  CMGPosition._light = function(square, direction) {
-    return this.SHADOWS[square][direction ^ 4];
+  CMGPosition.CASTLING_WHITE_QUEEN = {
+    move: [4, 0, 0, 0],
+    mustBeEmpty: [14, 0, 0, 0]
+  };
+
+  CMGPosition.CASTLING_BLACK_KING = {
+    move: [0, 0, 0, 16384],
+    mustBeEmpty: [0, 0, 0, 24576]
+  };
+
+  CMGPosition.CASTLING_BLACK_QUEEN = {
+    move: [0, 0, 0, 1024],
+    mustBeEmpty: [0, 0, 0, 3584]
   };
 
   CMGPosition.fromString = function(positionString) {
@@ -59,6 +121,17 @@ CMGPosition = (function() {
     enPassantSquare = CMGPosition._enPassantStringToSquare(enPassantString);
     turn = CMGPosition._turnCharToValue(turnChar);
     return new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber);
+  };
+
+  CMGPosition._clone = function(obj) {
+    var key, out, value;
+    if (obj === null || typeof obj !== 'object') return obj;
+    out = new obj.constructor();
+    for (key in obj) {
+      value = obj[key];
+      out[key] = this._clone(value);
+    }
+    return out;
   };
 
   CMGPosition._boardStringToPieces = function(boardString) {
@@ -119,16 +192,17 @@ CMGPosition = (function() {
 
   CMGPosition._allowedCastlingStringToValue = function(allowedCastlingString) {
     var func;
+    if (allowedCastlingString === '-') return 0;
     func = function(acc, pce) {
       switch (pce) {
         case 'K':
-          return acc + CMGPosition.CASTLING_WHITE_KING;
+          return acc + CMGPosition.CASTLING_CODE_WHITE_KING;
         case 'Q':
-          return acc + CMGPosition.CASTLING_WHITE_QUEEN;
+          return acc + CMGPosition.CASTLING_CODE_WHITE_QUEEN;
         case 'k':
-          return acc + CMGPosition.CASTLING_BLACK_KING;
+          return acc + CMGPosition.CASTLING_CODE_BLACK_KING;
         case 'q':
-          return acc + CMGPosition.CASTLING_BLACK_QUEEN;
+          return acc + CMGPosition.CASTLING_CODE_BLACK_QUEEN;
       }
       return acc;
     };
@@ -137,13 +211,14 @@ CMGPosition = (function() {
 
   CMGPosition._allowedCastlingValueToString = function(allowedCastling) {
     var allowedCastlingString, bkChar, bqChar, wkChar, wqChar;
+    if (allowedCastling === 0) return '-';
     wqChar = wkChar = bqChar = bkChar = '';
-    if (allowedCastling & CMGPosition.CASTLING_WHITE_QUEEN) wqChar = 'Q';
-    if (allowedCastling & CMGPosition.CASTLING_WHITE_KING) wkChar = 'K';
-    if (allowedCastling & CMGPosition.CASTLING_BLACK_QUEEN) bqChar = 'q';
-    if (allowedCastling & CMGPosition.CASTLING_BLACK_KING) bkChar = 'k';
+    if (allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) wqChar = 'Q';
+    if (allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING) wkChar = 'K';
+    if (allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) bqChar = 'q';
+    if (allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING) bkChar = 'k';
     allowedCastlingString = [wkChar, wqChar, bkChar, bqChar].join('');
-    if (allowedCastlingString === '') return '-';
+    console.log('ac: ' + allowedCastlingString);
     return allowedCastlingString;
   };
 
@@ -181,7 +256,16 @@ CMGPosition = (function() {
     return pieces[squareKey];
   };
 
+  CMGPosition._shadow = function(square, direction) {
+    return this.SHADOWS[square][direction];
+  };
+
+  CMGPosition._light = function(square, direction) {
+    return this.SHADOWS[square][direction ^ 4];
+  };
+
   function CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber) {
+    var piece, _i, _len, _ref;
     this.pieces = pieces;
     this.turn = turn;
     this.allowedCastling = allowedCastling != null ? allowedCastling : 0;
@@ -199,6 +283,17 @@ CMGPosition = (function() {
     */
     this.bitBoards = {};
     this._generateBitBoards();
+    this.piecesOfColor = {
+      b: [],
+      w: []
+    };
+    if (this.pieces) {
+      _ref = this.pieces;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        piece = _ref[_i];
+        this.piecesOfColor[piece.color].push(piece);
+      }
+    }
   }
 
   CMGPosition.prototype.playerColorCode = function() {
@@ -236,44 +331,138 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype.allPossibleMovesFromSquare = function(squareKey) {
-    var nonTakingMoves, out, piece, pseudoMove, pseudoMoves, shadowDirections, shadows, _i, _len;
-    pseudoMoves = [];
+    var allShadows, move, newPieceType, nonTakingMoves, out, piece, playerShadows, pseudoMove, pseudoMoveBitboard, pseudoMoves, shadowDirections, takenOnSquare, takenPiece, target, targets, toPiece, _i, _j, _k, _len, _len2, _len3, _ref;
+    pseudoMoveBitboard = 0x0;
     piece = this._getPieceOnSquare(squareKey);
-    if (!piece) return [];
-    if (piece.color !== this.turn) return [];
+    if (!piece) return 0x0;
+    if (piece.color !== this.turn) return 0x0;
     switch (piece.type) {
       case 'r':
-        shadows = this._computeShadows(squareKey, [0, 2, 4, 6], this.turn);
-        pseudoMoves = CMGPosition.ROOK_MOVES[squareKey] & ~shadows;
+        playerShadows = this._computeShadows(squareKey, [0, 2, 4, 6], this.turn);
+        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.ROOK_MOVES[squareKey], CMGBitBoard.binNot(playerShadows));
         break;
       case 'n':
-        pseudoMoves = CMGPosition.KNIGHT_MOVES[squareKey] & ~this.bitBoards.allPiecesOfColor[this.turn];
+        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.KNIGHT_MOVES[squareKey], CMGBitBoard.binNot(this.bitBoards.allPiecesOfColor[this.turn]));
         break;
       case 'b':
-        shadows = this._computeShadows(squareKey, [1, 3, 5, 7], this.turn);
-        pseudoMoves = CMGPosition.BISHOP_MOVES[squareKey] & ~shadows;
+        playerShadows = this._computeShadows(squareKey, [1, 3, 5, 7], this.turn);
+        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.BISHOP_MOVES[squareKey], CMGBitBoard.binNot(playerShadows));
         break;
       case 'q':
-        shadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
-        pseudoMoves = CMGPosition.QUEEN_MOVES[squareKey] & ~shadows;
+        playerShadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
+        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.QUEEN_MOVES[squareKey], CMGBitBoard.binNot(playerShadows));
         break;
       case 'k':
-        shadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
-        pseudoMoves = CMGPosition.KING_MOVES_WITHOUT_CASTLING[squareKey] & ~shadows;
+        playerShadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
+        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.KING_MOVES_WITHOUT_CASTLING[squareKey], CMGBitBoard.binNot(playerShadows));
+        if (this.turn === 'b') {
+          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty))) {
+            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_BLACK_KING.move);
+          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty))) {
+            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_BLACK_QUEEN.move);
+          }
+        } else {
+          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty))) {
+            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_WHITE_KING.move);
+          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty))) {
+            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_WHITE_QUEEN.move);
+          }
+        }
         break;
       case 'p':
         if (this.turn === 'w') shadowDirections = [0];
         if (this.turn === 'b') shadowDirections = [4];
-        shadows = this._computeShadows(squareKey, shadowDirections, this.turn);
-        nonTakingMoves = CMGPosition.PAWN_NON_TAKING_MOVES[squareKey] & ~shadows;
-        pseudoMoves = CMGPosition.PAWN_TAKING_MOVES[squareKey].concat(nonTakingMoves);
+        allShadows = this._computeShadows(squareKey, shadowDirections);
+        nonTakingMoves = CMGBitBoard.binAnd(CMGPosition.PAWN_NON_TAKING_MOVES[squareKey], CMGBitBoard.binNot(allShadows));
+        pseudoMoveBitboard = CMGBitBoard.binOr(CMGPosition.PAWN_TAKING_MOVES[squareKey], nonTakingMoves);
+    }
+    pseudoMoves = [];
+    targets = CMGBitBoard.bitBoardToSquareKeyArray(pseudoMoveBitboard);
+    for (_i = 0, _len = targets.length; _i < _len; _i++) {
+      target = targets[_i];
+      toPiece = piece;
+      takenPiece = this._getPieceOnSquare(target);
+      if (takenPiece) takenOnSquare = target;
+      if (piece.type === 'p' && (target >= CMGPosition.TOP_LEFT_CORNER || target <= CMGPosition.BOTTOM_RIGHT_CORNER)) {
+        _ref = ['q', 'r', 'n', 'b'];
+        for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+          newPieceType = _ref[_j];
+          move = new CMGMove(squareKey, piece, target, newPieceType, null, false, takenPiece, takenOnSquare);
+          move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
+          pseudoMoves.push(move);
+        }
+      } else {
+        move = new CMGMove(squareKey, piece, target, toPiece, null, false, takenPiece, takenOnSquare);
+        move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
+        pseudoMoves.push(move);
+      }
     }
     out = [];
-    for (_i = 0, _len = pseudoMoves.length; _i < _len; _i++) {
-      pseudoMove = pseudoMoves[_i];
+    for (_k = 0, _len3 = pseudoMoves.length; _k < _len3; _k++) {
+      pseudoMove = pseudoMoves[_k];
       if (this._isValidMoveObject(pseudoMove)) out.push(pseudoMove);
     }
     return out;
+  };
+
+  CMGPosition.prototype._getNewPositionObjectAfterMove = function(move) {
+    var allowedCastling, enPassantSquare, halfMoveClock, moveNumber, pieces, turn;
+    pieces = CMGPosition._clone(this.pieces);
+    pieces[move.fromSquare] = null;
+    delete pieces[move.fromSquare];
+    if (move.takenOnSquare) {
+      pieces[move.takenOnSquare] = null;
+      delete pieces[move.takenOnSquare];
+    }
+    pieces[move.toSquare] = move.toPiece;
+    if (move.castling === 'k') {
+      if (this.turn === 'b') {
+        pieces[075] = pieces[077];
+        delete pieces[077];
+      }
+      if (this.turn === 'w') {
+        pieces[5] = pieces[7];
+        delete pieces[7];
+      }
+    } else if (move.castling === 'q') {
+      if (this.turn === 'b') {
+        pieces[072] = pieces[070];
+        delete pieces[070];
+      }
+      if (this.turn === 'w') {
+        pieces[2] = pieces[0];
+        delete pieces[0];
+      }
+    }
+    turn = this.opponentColorCode();
+    allowedCastling = this.allowedCastling;
+    switch (move.fromSquare) {
+      case 0:
+        allowedCastling &= ~CMGPosition.CASTLING_CODE_WHITE_QUEEN;
+        break;
+      case 4:
+        allowedCastling &= ~CMGPosition.CASTLING_CODE_WHITE_QUEEN & ~CMGPosition.CASTLING_CODE_WHITE_KING;
+        break;
+      case 7:
+        allowedCastling &= ~CMGPosition.CASTLING_CODE_WHITE_KING;
+        break;
+      case 070:
+        allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_QUEEN;
+        break;
+      case 074:
+        allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~CMGPosition.CASTLING_CODE_BLACK_KING;
+        break;
+      case 077:
+        allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_KING;
+    }
+    enPassantSquare = false;
+    halfMoveClock = this.halfMoveClock;
+    moveNumber = this.moveNumber;
+    if (moveNumber > 0) {
+      halfMoveClock += 1;
+      if (turn === 'w') moveNumber += 1;
+    }
+    return new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber);
   };
 
   CMGPosition.prototype.allPossibleMoves = function() {
@@ -301,6 +490,30 @@ CMGPosition = (function() {
             Get the winner color code
             @return (false|'b'|'w')
     */    return 'todo';
+  };
+
+  CMGPosition.prototype._computeShadows = function(squareKey, directions, pieceColorFilter) {
+    var direction, piece, pieces, shadowMap, _i, _j, _len, _len2;
+    if (pieceColorFilter == null) pieceColorFilter = false;
+    shadowMap = CMGBitBoard.EMPTY_BOARD;
+    pieces = null;
+    if (pieceColorFilter) {
+      pieces = this.piecesOfColor[pieceColorFilter];
+    } else {
+      pieces = this.pieces;
+    }
+    for (_i = 0, _len = pieces.length; _i < _len; _i++) {
+      piece = pieces[_i];
+      if (piece.square === squareKey) continue;
+      for (_j = 0, _len2 = directions.length; _j < _len2; _j++) {
+        direction = directions[_j];
+        if (CMGBitBoard.binAnd(CMGPosition._light(piece.square, direction), this._bitValueOfSquare(squareKey))) {
+          shadowMap = CMGBitBoard.binOr(shadowMap, CMGPosition._shadow(piece.square, direction));
+          break;
+        }
+      }
+    }
+    return shadowMap;
   };
 
   CMGPosition.prototype._isValidMoveObject = function(move) {
@@ -365,24 +578,27 @@ CMGPosition = (function() {
 
   CMGPosition.prototype._generateBitBoards = function() {
     var bvs, color, square, type, _ref, _ref2, _results;
-    this.bitBoards.allPieces = 0x0;
-    this.bitBoards.allPiecesOfColor = 0x0;
+    this.bitBoards.allPieces = CMGBitBoard.EMPTY_BOARD;
+    this.bitBoards.allPiecesOfColor = {
+      'b': CMGBitBoard.EMPTY_BOARD,
+      'w': CMGBitBoard.EMPTY_BOARD
+    };
     this.bitBoards.allPiecesOfColorAndType = {
       'b': {
-        'r': 0x0,
-        'n': 0x0,
-        'b': 0x0,
-        'k': 0x0,
-        'q': 0x0,
-        'p': 0x0
+        'r': CMGBitBoard.EMPTY_BOARD,
+        'n': CMGBitBoard.EMPTY_BOARD,
+        'b': CMGBitBoard.EMPTY_BOARD,
+        'k': CMGBitBoard.EMPTY_BOARD,
+        'q': CMGBitBoard.EMPTY_BOARD,
+        'p': CMGBitBoard.EMPTY_BOARD
       },
       'w': {
-        'r': 0x0,
-        'n': 0x0,
-        'b': 0x0,
-        'k': 0x0,
-        'q': 0x0,
-        'p': 0x0
+        'r': CMGBitBoard.EMPTY_BOARD,
+        'n': CMGBitBoard.EMPTY_BOARD,
+        'b': CMGBitBoard.EMPTY_BOARD,
+        'k': CMGBitBoard.EMPTY_BOARD,
+        'q': CMGBitBoard.EMPTY_BOARD,
+        'p': CMGBitBoard.EMPTY_BOARD
       }
     };
     _ref = this.pieces;
@@ -390,15 +606,17 @@ CMGPosition = (function() {
     for (square in _ref) {
       _ref2 = _ref[square], color = _ref2.color, type = _ref2.type;
       bvs = this._bitValueOfSquare(square);
-      this.bitBoards.allPieces |= bvs;
-      this.bitBoards.allPiecesOfColor[color] |= bvs;
-      _results.push(this.bitBoards.allPiecesOfColorAndType[color][type] |= bvs);
+      this.bitBoards.allPieces = CMGBitBoard.binOr(bvs, this.bitBoards.allPieces);
+      this.bitBoards.allPiecesOfColor[color] = CMGBitBoard.binOr(bvs, this.bitBoards.allPiecesOfColor[color]);
+      _results.push(this.bitBoards.allPiecesOfColorAndType[color][type] = CMGBitBoard.binOr(bvs, this.bitBoards.allPiecesOfColorAndType[color][type]));
     }
     return _results;
   };
 
   CMGPosition.prototype._bitValueOfSquare = function(square) {
-    return Math.pow(2, square);
+    var originValue;
+    originValue = [1, 0, 0, 0];
+    return CMGBitBoard.binLeftShift(originValue, square);
   };
 
   return CMGPosition;
@@ -431,6 +649,10 @@ CMGMove = (function() {
 
   CMGMove.prototype.toString = function() {
     return CMGPosition._squareToString(fromSquare) + CMGPosition._squareToString(toSquare);
+  };
+
+  CMGMove.prototype.setNewPositionObject = function(newPosition) {
+    this.newPosition = newPosition;
   };
 
   return CMGMove;
@@ -489,17 +711,17 @@ module.exports = {
 };
 /* bitboards.js */
 // Generated chess bitboards - copyright 2012 François Cardinaux, Genève
-CMGPosition.QUEEN_MOVES = [[39623,15,34952,4680],[17899,32783,17476,292],[10877,18447,8738,18],[38206,9359,4369,1],[16927,39623,8,34952],[8463,17899,132,17476],[4111,10877,2114,8738],[15,38206,33825,4369],[44156,240,34953,9344],[24254,240,17476,4680],[42967,33008,8738,292],[21475,18680,4377,18],[8689,44156,132,34953],[4336,24254,2114,17476],[240,42967,33825,8738],[240,21475,16912,4377],[51146,3840,34970,18432],[60389,3840,17477,9344],[32122,3848,8746,4680],[15925,36740,4501,292],[7954,51146,2114,34970],[3841,60389,33825,17477],[3840,32122,16912,8746],[3840,15925,8448,4501],[31913,61440,35244,32768],[48724,61448,17502,18432],[55202,61572,8871,9344],[58201,63554,6483,4680],[61732,31913,33825,35244],[61458,48724,16912,17502],[61441,55202,8448,8871],[61440,58201,4096,6483],[51864,8,39623,15],[58692,132,17899,32783],[31266,2114,10877,18447],[13713,33825,38206,9359],[4680,51864,16927,39623],[292,58692,8463,17899],[18,31266,4111,10877],[1,13713,15,38206],[43400,132,44156,240],[21572,2114,24254,240],[41506,33825,42967,33008],[22801,16912,21475,18680],[9344,43400,8689,44156],[4680,21572,4336,24254],[292,41506,240,42967],[18,22801,240,21475],[39048,2114,51146,3840],[17476,33825,60389,3840],[8738,16912,32122,3848],[37137,8448,15925,36740],[18432,39048,7954,51146],[9344,17476,3841,60389],[4680,8738,3840,32122],[292,37137,3840,15925],[34952,33825,31913,61440],[17476,16912,48724,61448],[8738,8448,55202,61572],[4369,4096,58201,63554],[32768,34952,61732,31913],[18432,17476,61458,48724],[9344,8738,61441,55202],[4680,4369,61440,58201]];
-CMGPosition.ROOK_MOVES = [[34951,15,34952,0],[17483,15,17476,0],[8749,15,8738,0],[4382,15,4369,0],[15,34951,0,34952],[15,17483,0,17476],[15,8749,0,8738],[15,4382,0,4369],[34936,240,34952,0],[17588,240,17476,0],[8914,240,8738,0],[4577,240,4369,0],[240,34936,0,34952],[240,17588,0,17476],[240,8914,0,8738],[240,4577,0,4369],[34696,3840,34952,0],[19268,3840,17476,0],[11554,3840,8738,0],[7697,3840,4369,0],[3840,34696,0,34952],[3840,19268,0,17476],[3840,11554,0,8738],[3840,7697,0,4369],[30856,61440,34952,0],[46148,61440,17476,0],[53794,61440,8738,0],[57617,61440,4369,0],[61440,30856,0,34952],[61440,46148,0,17476],[61440,53794,0,8738],[61440,57617,0,4369],[34952,0,34951,15],[17476,0,17483,15],[8738,0,8749,15],[4369,0,4382,15],[0,34952,15,34951],[0,17476,15,17483],[0,8738,15,8749],[0,4369,15,4382],[34952,0,34936,240],[17476,0,17588,240],[8738,0,8914,240],[4369,0,4577,240],[0,34952,240,34936],[0,17476,240,17588],[0,8738,240,8914],[0,4369,240,4577],[34952,0,34696,3840],[17476,0,19268,3840],[8738,0,11554,3840],[4369,0,7697,3840],[0,34952,3840,34696],[0,17476,3840,19268],[0,8738,3840,11554],[0,4369,3840,7697],[34952,0,30856,61440],[17476,0,46148,61440],[8738,0,53794,61440],[4369,0,57617,61440],[0,34952,61440,30856],[0,17476,61440,46148],[0,8738,61440,53794],[0,4369,61440,57617]];
-CMGPosition.BISHOP_MOVES = [[4672,0,0,4680],[416,32768,0,292],[2128,18432,0,18],[33824,9344,0,1],[16912,4672,8,0],[8448,416,132,0],[4096,2128,2114,0],[0,33824,33825,0],[9220,0,1,9344],[6666,0,0,4680],[34053,32768,0,292],[16898,18440,8,18],[8449,9220,132,1],[4096,6666,2114,0],[0,34053,33825,0],[0,16898,16912,8],[16450,0,18,18432],[41121,0,1,9344],[20568,8,8,4680],[8228,32900,132,292],[4114,16450,2114,18],[1,41121,33825,1],[0,20568,16912,8],[0,8228,8448,132],[1057,0,292,32768],[2576,8,26,18432],[1408,132,133,9344],[584,2114,2114,4680],[292,1057,33825,292],[18,2576,16912,26],[1,1408,8448,133],[0,584,4096,2114],[16912,8,4672,0],[41216,132,416,32768],[22528,2114,2128,18432],[9344,33825,33824,9344],[4680,16912,16912,4672],[292,41216,8448,416],[18,22528,4096,2128],[1,9344,0,33824],[8448,132,9220,0],[4096,2114,6666,0],[32768,33825,34053,32768],[18432,16912,16898,18440],[9344,8448,8449,9220],[4680,4096,4096,6666],[292,32768,0,34053],[18,18432,0,16898],[4096,2114,16450,0],[0,33825,41121,0],[0,16912,20568,8],[32768,8448,8228,32900],[18432,4096,4114,16450],[9344,0,1,41121],[4680,0,0,20568],[292,32768,0,8228],[0,33825,1057,0],[0,16912,2576,8],[0,8448,1408,132],[0,4096,584,2114],[32768,0,292,1057],[18432,0,18,2576],[9344,0,1,1408],[4680,0,0,584]];
-CMGPosition.KNIGHT_MOVES = [[1056,0,0,0],[2576,0,0,0],[1408,128,0,0],[576,2112,0,0],[288,1056,0,0],[16,2576,0,0],[0,1408,0,0],[0,576,0,0],[16898,0,0,0],[41217,0,0,0],[22536,2056,0,0],[9220,33796,0,0],[4610,16898,0,0],[257,41217,0,0],[0,22536,0,0],[0,9220,0,0],[8228,0,4,0],[4122,0,10,0],[32901,32896,5,0],[16450,16456,2,8],[8225,8228,1,4],[4112,4122,0,10],[0,32901,0,5],[0,16450,0,2],[576,0,66,0],[416,0,161,0],[2128,2048,88,8],[1056,1152,36,132],[528,576,18,66],[256,416,1,161],[0,2128,0,88],[0,1056,0,36],[9216,0,1056,0],[6656,0,2576,0],[34048,32768,1408,128],[16896,18432,576,2112],[8448,9216,288,1056],[4096,6656,16,2576],[0,34048,0,1408],[0,16896,0,576],[16384,0,16898,0],[40960,0,41217,0],[20480,0,22536,2056],[8192,32768,9220,33796],[4096,16384,4610,16898],[0,40960,257,41217],[0,20480,0,22536],[0,8192,0,9220],[0,0,8228,0],[0,0,4122,0],[0,0,32901,32896],[0,0,16450,16456],[0,0,8225,8228],[0,0,4112,4122],[0,0,0,32901],[0,0,0,16450],[0,0,576,0],[0,0,416,0],[0,0,2128,2048],[0,0,1056,1152],[0,0,528,576],[0,0,256,416],[0,0,0,2128],[0,0,0,1056]];
-CMGPosition.KING_MOVES_WITHOUT_CASTLING = [[196,0,0,0],[234,0,0,0],[117,0,0,0],[50,136,0,0],[17,196,0,0],[0,234,0,0],[0,117,0,0],[0,50,0,0],[3148,0,0,0],[3758,0,0,0],[1879,0,0,0],[803,2184,0,0],[273,3148,0,0],[0,3758,0,0],[0,1879,0,0],[0,803,0,0],[50368,0,0,0],[60128,0,0,0],[30064,0,0,0],[12848,34944,0,0],[4368,50368,0,0],[0,60128,0,0],[0,30064,0,0],[0,12848,0,0],[19456,0,12,0],[44544,0,14,0],[22272,0,7,0],[8960,34816,3,8],[4352,19456,1,12],[0,44544,0,14],[0,22272,0,7],[0,8960,0,3],[49152,0,196,0],[57344,0,234,0],[28672,0,117,0],[12288,32768,50,136],[4096,49152,17,196],[0,57344,0,234],[0,28672,0,117],[0,12288,0,50],[0,0,3148,0],[0,0,3758,0],[0,0,1879,0],[0,0,803,2184],[0,0,273,3148],[0,0,0,3758],[0,0,0,1879],[0,0,0,803],[0,0,50368,0],[0,0,60128,0],[0,0,30064,0],[0,0,12848,34944],[0,0,4368,50368],[0,0,0,60128],[0,0,0,30064],[0,0,0,12848],[0,0,19456,0],[0,0,44544,0],[0,0,22272,0],[0,0,8960,34816],[0,0,4352,19456],[0,0,0,44544],[0,0,0,22272],[0,0,0,8960]];
+CMGPosition.QUEEN_MOVES = [[1022,2309,8465,33089],[2045,4618,16930,642],[3835,9237,33860,1028],[7415,18730,2184,2056],[14575,37460,4113,4112],[28895,9384,8482,8224],[57535,18512,16964,16449],[49279,37024,33928,33154],[65027,1283,4361,16673],[64775,2567,8722,33346],[64270,5390,17444,1156],[63260,10780,34889,2056],[61240,21560,4498,4112],[57200,43120,8740,8225],[49120,20704,17480,16706],[32704,41152,34960,33412],[773,1022,2309,8465],[1802,2045,4618,16930],[3605,3835,9237,33860],[7210,7415,18730,2184],[14420,14575,37460,4113],[28840,28895,9384,8482],[57424,57535,18512,16964],[49312,49279,37024,33928],[1289,65027,1283,4361],[2578,64775,2567,8722],[5412,64270,5390,17444],[10825,63260,10780,34889],[21650,61240,21560,4498],[43044,57200,43120,8740],[20552,49120,20704,17480],[41104,32704,41152,34960],[2321,773,1022,2309],[4642,1802,2045,4618],[9284,3605,3835,9237],[18824,7210,7415,18730],[37393,14420,14575,37460],[9250,28840,28895,9384],[18500,57424,57535,18512],[37000,49312,49279,37024],[4385,1289,65027,1283],[8770,2578,64775,2567],[17540,5412,64270,5390],[34824,10825,63260,10780],[4368,21650,61240,21560],[8737,43044,57200,43120],[17474,20552,49120,20704],[34948,41104,32704,41152],[8513,2321,773,1022],[17026,4642,1802,2045],[33796,9284,3605,3835],[2056,18824,7210,7415],[4112,37393,14420,14575],[8480,9250,28840,28895],[16961,18500,57424,57535],[33922,37000,49312,49279],[16769,4385,1289,65027],[33282,8770,2578,64775],[1028,17540,5412,64270],[2056,34824,10825,63260],[4112,4368,21650,61240],[8224,8737,43044,57200],[16704,17474,20552,49120],[33409,34948,41104,32704]];
+CMGPosition.ROOK_MOVES = [[510,257,257,257],[765,514,514,514],[1275,1028,1028,1028],[2295,2056,2056,2056],[4335,4112,4112,4112],[8415,8224,8224,8224],[16575,16448,16448,16448],[32895,32896,32896,32896],[65025,257,257,257],[64770,514,514,514],[64260,1028,1028,1028],[63240,2056,2056,2056],[61200,4112,4112,4112],[57120,8224,8224,8224],[48960,16448,16448,16448],[32640,32896,32896,32896],[257,510,257,257],[514,765,514,514],[1028,1275,1028,1028],[2056,2295,2056,2056],[4112,4335,4112,4112],[8224,8415,8224,8224],[16448,16575,16448,16448],[32896,32895,32896,32896],[257,65025,257,257],[514,64770,514,514],[1028,64260,1028,1028],[2056,63240,2056,2056],[4112,61200,4112,4112],[8224,57120,8224,8224],[16448,48960,16448,16448],[32896,32640,32896,32896],[257,257,510,257],[514,514,765,514],[1028,1028,1275,1028],[2056,2056,2295,2056],[4112,4112,4335,4112],[8224,8224,8415,8224],[16448,16448,16575,16448],[32896,32896,32895,32896],[257,257,65025,257],[514,514,64770,514],[1028,1028,64260,1028],[2056,2056,63240,2056],[4112,4112,61200,4112],[8224,8224,57120,8224],[16448,16448,48960,16448],[32896,32896,32640,32896],[257,257,257,510],[514,514,514,765],[1028,1028,1028,1275],[2056,2056,2056,2295],[4112,4112,4112,4335],[8224,8224,8224,8415],[16448,16448,16448,16575],[32896,32896,32896,32895],[257,257,257,65025],[514,514,514,64770],[1028,1028,1028,64260],[2056,2056,2056,63240],[4112,4112,4112,61200],[8224,8224,8224,57120],[16448,16448,16448,48960],[32896,32896,32896,32640]];
+CMGPosition.BISHOP_MOVES = [[512,2052,8208,32832],[1280,4104,16416,128],[2560,8209,32832,0],[5120,16674,128,0],[10240,33348,1,0],[20480,1160,258,0],[40960,2064,516,1],[16384,4128,1032,258],[2,1026,4104,16416],[5,2053,8208,32832],[10,4362,16416,128],[20,8724,32833,0],[40,17448,386,0],[80,34896,516,1],[160,4256,1032,258],[64,8256,2064,516],[516,512,2052,8208],[1288,1280,4104,16416],[2577,2560,8209,32832],[5154,5120,16674,128],[10308,10240,33348,1],[20616,20480,1160,258],[40976,40960,2064,516],[16416,16384,4128,1032],[1032,2,1026,4104],[2064,5,2053,8208],[4384,10,4362,16416],[8769,20,8724,32833],[17538,40,17448,386],[34820,80,34896,516],[4104,160,4256,1032],[8208,64,8256,2064],[2064,516,512,2052],[4128,1288,1280,4104],[8256,2577,2560,8209],[16768,5154,5120,16674],[33281,10308,10240,33348],[1026,20616,20480,1160],[2052,40976,40960,2064],[4104,16416,16384,4128],[4128,1032,2,1026],[8256,2064,5,2053],[16512,4384,10,4362],[32768,8769,20,8724],[256,17538,40,17448],[513,34820,80,34896],[1026,4104,160,4256],[2052,8208,64,8256],[8256,2064,516,512],[16512,4128,1288,1280],[32768,8256,2577,2560],[0,16768,5154,5120],[0,33281,10308,10240],[256,1026,20616,20480],[513,2052,40976,40960],[1026,4104,16416,16384],[16512,4128,1032,2],[32768,8256,2064,5],[0,16512,4384,10],[0,32768,8769,20],[0,256,17538,40],[0,513,34820,80],[256,1026,4104,160],[513,2052,8208,64]];
+CMGPosition.KNIGHT_MOVES = [[1024,2,0,0],[2048,5,0,0],[4352,10,0,0],[8704,20,0,0],[17408,40,0,0],[34816,80,0,0],[4096,160,0,0],[8192,64,0,0],[4,516,0,0],[8,1288,0,0],[17,2577,0,0],[34,5154,0,0],[68,10308,0,0],[136,20616,0,0],[16,40976,0,0],[32,16416,0,0],[1026,1024,2,0],[2053,2048,5,0],[4362,4352,10,0],[8724,8704,20,0],[17448,17408,40,0],[34896,34816,80,0],[4256,4096,160,0],[8256,8192,64,0],[512,4,516,0],[1280,8,1288,0],[2560,17,2577,0],[5120,34,5154,0],[10240,68,10308,0],[20480,136,20616,0],[40960,16,40976,0],[16384,32,16416,0],[0,1026,1024,2],[0,2053,2048,5],[0,4362,4352,10],[0,8724,8704,20],[0,17448,17408,40],[0,34896,34816,80],[0,4256,4096,160],[0,8256,8192,64],[0,512,4,516],[0,1280,8,1288],[0,2560,17,2577],[0,5120,34,5154],[0,10240,68,10308],[0,20480,136,20616],[0,40960,16,40976],[0,16384,32,16416],[0,0,1026,1024],[0,0,2053,2048],[0,0,4362,4352],[0,0,8724,8704],[0,0,17448,17408],[0,0,34896,34816],[0,0,4256,4096],[0,0,8256,8192],[0,0,512,4],[0,0,1280,8],[0,0,2560,17],[0,0,5120,34],[0,0,10240,68],[0,0,20480,136],[0,0,40960,16],[0,0,16384,32]];
+CMGPosition.KING_MOVES_WITHOUT_CASTLING = [[770,0,0,0],[1797,0,0,0],[3594,0,0,0],[7188,0,0,0],[14376,0,0,0],[28752,0,0,0],[57504,0,0,0],[49216,0,0,0],[515,3,0,0],[1287,7,0,0],[2574,14,0,0],[5148,28,0,0],[10296,56,0,0],[20592,112,0,0],[41184,224,0,0],[16576,192,0,0],[768,770,0,0],[1792,1797,0,0],[3584,3594,0,0],[7168,7188,0,0],[14336,14376,0,0],[28672,28752,0,0],[57344,57504,0,0],[49152,49216,0,0],[0,515,3,0],[0,1287,7,0],[0,2574,14,0],[0,5148,28,0],[0,10296,56,0],[0,20592,112,0],[0,41184,224,0],[0,16576,192,0],[0,768,770,0],[0,1792,1797,0],[0,3584,3594,0],[0,7168,7188,0],[0,14336,14376,0],[0,28672,28752,0],[0,57344,57504,0],[0,49152,49216,0],[0,0,515,3],[0,0,1287,7],[0,0,2574,14],[0,0,5148,28],[0,0,10296,56],[0,0,20592,112],[0,0,41184,224],[0,0,16576,192],[0,0,768,770],[0,0,1792,1797],[0,0,3584,3594],[0,0,7168,7188],[0,0,14336,14376],[0,0,28672,28752],[0,0,57344,57504],[0,0,49152,49216],[0,0,0,515],[0,0,0,1287],[0,0,0,2574],[0,0,0,5148],[0,0,0,10296],[0,0,0,20592],[0,0,0,41184],[0,0,0,16576]];
 CMGPosition.PAWN_NON_TAKING_MOVES = {
-    b: [[2048,0,0,0],[1024,0,0,0],[512,0,0,0],[256,0,0,0],[0,2048,0,0],[0,1024,0,0],[0,512,0,0],[0,256,0,0],[32768,0,0,0],[16384,0,0,0],[8192,0,0,0],[4096,0,0,0],[0,32768,0,0],[0,16384,0,0],[0,8192,0,0],[0,4096,0,0],[0,0,8,0],[0,0,4,0],[0,0,2,0],[0,0,1,0],[0,0,0,8],[0,0,0,4],[0,0,0,2],[0,0,0,1],[0,0,128,0],[0,0,64,0],[0,0,32,0],[0,0,16,0],[0,0,0,128],[0,0,0,64],[0,0,0,32],[0,0,0,16],[0,0,2048,0],[0,0,1024,0],[0,0,512,0],[0,0,256,0],[0,0,0,2048],[0,0,0,1024],[0,0,0,512],[0,0,0,256],[0,0,136,0],[0,0,68,0],[0,0,34,0],[0,0,17,0],[0,0,0,136],[0,0,0,68],[0,0,0,34],[0,0,0,17]], 
-    w: [[8,0,0,0],[4,0,0,0],[2,0,0,0],[1,0,0,0],[0,8,0,0],[0,4,0,0],[0,2,0,0],[0,1,0,0],[32768,0,0,0],[16384,0,0,0],[8192,0,0,0],[4096,0,0,0],[0,32768,0,0],[0,16384,0,0],[0,8192,0,0],[0,4096,0,0],[0,0,8,0],[0,0,4,0],[0,0,2,0],[0,0,1,0],[0,0,0,8],[0,0,0,4],[0,0,0,2],[0,0,0,1],[0,0,128,0],[0,0,64,0],[0,0,32,0],[0,0,16,0],[0,0,0,128],[0,0,0,64],[0,0,0,32],[0,0,0,16],[0,0,2048,0],[0,0,1024,0],[0,0,512,0],[0,0,256,0],[0,0,0,2048],[0,0,0,1024],[0,0,0,512],[0,0,0,256],[0,0,32768,0],[0,0,16384,0],[0,0,8192,0],[0,0,4096,0],[0,0,0,32768],[0,0,0,16384],[0,0,0,8192],[0,0,0,4096]]
+    b: [[0,1,0,0],[0,2,0,0],[0,4,0,0],[0,8,0,0],[0,16,0,0],[0,32,0,0],[0,64,0,0],[0,128,0,0],[0,256,0,0],[0,512,0,0],[0,1024,0,0],[0,2048,0,0],[0,4096,0,0],[0,8192,0,0],[0,16384,0,0],[0,32768,0,0],[0,0,1,0],[0,0,2,0],[0,0,4,0],[0,0,8,0],[0,0,16,0],[0,0,32,0],[0,0,64,0],[0,0,128,0],[0,0,256,0],[0,0,512,0],[0,0,1024,0],[0,0,2048,0],[0,0,4096,0],[0,0,8192,0],[0,0,16384,0],[0,0,32768,0],[0,0,0,1],[0,0,0,2],[0,0,0,4],[0,0,0,8],[0,0,0,16],[0,0,0,32],[0,0,0,64],[0,0,0,128],[0,0,257,0],[0,0,514,0],[0,0,1028,0],[0,0,2056,0],[0,0,4112,0],[0,0,8224,0],[0,0,16448,0],[0,0,32896,0]], 
+    w: [[1,0,0,0],[2,0,0,0],[4,0,0,0],[8,0,0,0],[16,0,0,0],[32,0,0,0],[64,0,0,0],[128,0,0,0],[0,256,0,0],[0,512,0,0],[0,1024,0,0],[0,2048,0,0],[0,4096,0,0],[0,8192,0,0],[0,16384,0,0],[0,32768,0,0],[0,0,1,0],[0,0,2,0],[0,0,4,0],[0,0,8,0],[0,0,16,0],[0,0,32,0],[0,0,64,0],[0,0,128,0],[0,0,256,0],[0,0,512,0],[0,0,1024,0],[0,0,2048,0],[0,0,4096,0],[0,0,8192,0],[0,0,16384,0],[0,0,32768,0],[0,0,0,1],[0,0,0,2],[0,0,0,4],[0,0,0,8],[0,0,0,16],[0,0,0,32],[0,0,0,64],[0,0,0,128],[0,0,0,256],[0,0,0,512],[0,0,0,1024],[0,0,0,2048],[0,0,0,4096],[0,0,0,8192],[0,0,0,16384],[0,0,0,32768]]
 };
 CMGPosition.PAWN_TAKING_MOVES = {
-    b: [[4,0,0,0],[10,0,0,0],[5,0,0,0],[2,8,0,0],[1,4,0,0],[0,10,0,0],[0,5,0,0],[0,2,0,0],[64,0,0,0],[160,0,0,0],[80,0,0,0],[32,128,0,0],[16,64,0,0],[0,160,0,0],[0,80,0,0],[0,32,0,0],[1024,0,0,0],[2560,0,0,0],[1280,0,0,0],[512,2048,0,0],[256,1024,0,0],[0,2560,0,0],[0,1280,0,0],[0,512,0,0],[16384,0,0,0],[40960,0,0,0],[20480,0,0,0],[8192,32768,0,0],[4096,16384,0,0],[0,40960,0,0],[0,20480,0,0],[0,8192,0,0],[0,0,4,0],[0,0,10,0],[0,0,5,0],[0,0,2,8],[0,0,1,4],[0,0,0,10],[0,0,0,5],[0,0,0,2],[0,0,64,0],[0,0,160,0],[0,0,80,0],[0,0,32,128],[0,0,16,64],[0,0,0,160],[0,0,0,80],[0,0,0,32]], 
-    w: [[4,0,0,0],[10,0,0,0],[5,0,0,0],[2,8,0,0],[1,4,0,0],[0,10,0,0],[0,5,0,0],[0,2,0,0],[64,0,0,0],[160,0,0,0],[80,0,0,0],[32,128,0,0],[16,64,0,0],[0,160,0,0],[0,80,0,0],[0,32,0,0],[1024,0,0,0],[2560,0,0,0],[1280,0,0,0],[512,2048,0,0],[256,1024,0,0],[0,2560,0,0],[0,1280,0,0],[0,512,0,0],[16384,0,0,0],[40960,0,0,0],[20480,0,0,0],[8192,32768,0,0],[4096,16384,0,0],[0,40960,0,0],[0,20480,0,0],[0,8192,0,0],[0,0,4,0],[0,0,10,0],[0,0,5,0],[0,0,2,8],[0,0,1,4],[0,0,0,10],[0,0,0,5],[0,0,0,2],[0,0,64,0],[0,0,160,0],[0,0,80,0],[0,0,32,128],[0,0,16,64],[0,0,0,160],[0,0,0,80],[0,0,0,32]]
+    b: [[2,0,0,0],[5,0,0,0],[10,0,0,0],[20,0,0,0],[40,0,0,0],[80,0,0,0],[160,0,0,0],[64,0,0,0],[512,0,0,0],[1280,0,0,0],[2560,0,0,0],[5120,0,0,0],[10240,0,0,0],[20480,0,0,0],[40960,0,0,0],[16384,0,0,0],[0,2,0,0],[0,5,0,0],[0,10,0,0],[0,20,0,0],[0,40,0,0],[0,80,0,0],[0,160,0,0],[0,64,0,0],[0,512,0,0],[0,1280,0,0],[0,2560,0,0],[0,5120,0,0],[0,10240,0,0],[0,20480,0,0],[0,40960,0,0],[0,16384,0,0],[0,0,2,0],[0,0,5,0],[0,0,10,0],[0,0,20,0],[0,0,40,0],[0,0,80,0],[0,0,160,0],[0,0,64,0],[0,0,512,0],[0,0,1280,0],[0,0,2560,0],[0,0,5120,0],[0,0,10240,0],[0,0,20480,0],[0,0,40960,0],[0,0,16384,0]], 
+    w: [[2,0,0,0],[5,0,0,0],[10,0,0,0],[20,0,0,0],[40,0,0,0],[80,0,0,0],[160,0,0,0],[64,0,0,0],[512,0,0,0],[1280,0,0,0],[2560,0,0,0],[5120,0,0,0],[10240,0,0,0],[20480,0,0,0],[40960,0,0,0],[16384,0,0,0],[0,2,0,0],[0,5,0,0],[0,10,0,0],[0,20,0,0],[0,40,0,0],[0,80,0,0],[0,160,0,0],[0,64,0,0],[0,512,0,0],[0,1280,0,0],[0,2560,0,0],[0,5120,0,0],[0,10240,0,0],[0,20480,0,0],[0,40960,0,0],[0,16384,0,0],[0,0,2,0],[0,0,5,0],[0,0,10,0],[0,0,20,0],[0,0,40,0],[0,0,80,0],[0,0,160,0],[0,0,64,0],[0,0,512,0],[0,0,1280,0],[0,0,2560,0],[0,0,5120,0],[0,0,10240,0],[0,0,20480,0],[0,0,40960,0],[0,0,16384,0]]
 };
-CMGPosition.SHADOWS = [[[34952,0,34952,0],[4680,0,0,4680],[15,15,0,0],[8,0,0,0],[8,0,0,0],[8,0,0,0],[8,0,0,0],[8,0,0,0]],[[17476,0,17476,0],[292,32768,0,292],[7,15,0,0],[4,0,0,0],[4,0,0,0],[4,0,0,0],[12,0,0,0],[132,0,0,0]],[[8738,0,8738,0],[18,18432,0,18],[3,15,0,0],[2,0,0,0],[2,0,0,0],[2,0,0,0],[14,0,0,0],[2114,0,0,0]],[[4369,0,4369,0],[1,9344,0,1],[1,15,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[15,0,0,0],[33825,0,0,0]],[[0,34952,0,34952],[0,4680,0,0],[0,15,0,0],[0,8,0,0],[0,8,0,0],[0,8,0,0],[15,8,0,0],[16912,8,8,0]],[[0,17476,0,17476],[0,292,0,0],[0,7,0,0],[0,4,0,0],[0,4,0,0],[0,4,0,0],[15,12,0,0],[8448,132,132,0]],[[0,8738,0,8738],[0,18,0,0],[0,3,0,0],[0,2,0,0],[0,2,0,0],[0,2,0,0],[15,14,0,0],[4096,2114,2114,0]],[[0,4369,0,4369],[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0],[15,15,0,0],[0,33825,33825,0]],[[34944,0,34952,0],[9344,0,1,9344],[240,240,0,0],[132,0,0,0],[136,0,0,0],[128,0,0,0],[128,0,0,0],[128,0,0,0]],[[17472,0,17476,0],[4672,0,0,4680],[112,240,0,0],[66,0,0,0],[68,0,0,0],[72,0,0,0],[192,0,0,0],[2112,0,0,0]],[[8736,0,8738,0],[288,32768,0,292],[48,240,0,0],[33,0,0,0],[34,0,0,0],[36,0,0,0],[224,0,0,0],[33824,0,0,0]],[[4368,0,4369,0],[16,18432,0,18],[16,240,0,0],[16,8,0,0],[17,0,0,0],[18,0,0,0],[240,0,0,0],[16912,0,8,0]],[[0,34944,0,34952],[0,9344,0,1],[0,240,0,0],[0,132,0,0],[0,136,0,0],[1,128,0,0],[240,128,0,0],[8448,128,132,0]],[[0,17472,0,17476],[0,4672,0,0],[0,112,0,0],[0,66,0,0],[0,68,0,0],[0,72,0,0],[240,192,0,0],[4096,2112,2114,0]],[[0,8736,0,8738],[0,288,0,0],[0,48,0,0],[0,33,0,0],[0,34,0,0],[0,36,0,0],[240,224,0,0],[0,33824,33825,0]],[[0,4368,0,4369],[0,16,0,0],[0,16,0,0],[0,16,0,0],[0,17,0,0],[0,18,0,0],[240,240,0,0],[0,16912,16912,8]],[[34816,0,34952,0],[18432,0,18,18432],[3840,3840,0,0],[2114,0,0,0],[2184,0,0,0],[2048,0,0,0],[2048,0,0,0],[2048,0,0,0]],[[17408,0,17476,0],[9216,0,1,9344],[1792,3840,0,0],[1057,0,0,0],[1092,0,0,0],[1152,0,0,0],[3072,0,0,0],[33792,0,0,0]],[[8704,0,8738,0],[4608,0,0,4680],[768,3840,0,0],[528,8,0,0],[546,0,0,0],[584,0,0,0],[3584,0,0,0],[16896,0,8,0]],[[4352,0,4369,0],[256,32768,0,292],[256,3840,0,0],[256,132,0,0],[273,0,0,0],[292,0,0,0],[3840,0,0,0],[8448,0,132,0]],[[0,34816,0,34952],[0,18432,0,18],[0,3840,0,0],[0,2114,0,0],[0,2184,0,0],[18,2048,0,0],[3840,2048,0,0],[4096,2048,2114,0]],[[0,17408,0,17476],[0,9216,0,1],[0,1792,0,0],[0,1057,0,0],[0,1092,0,0],[1,1152,0,0],[3840,3072,0,0],[0,33792,33825,0]],[[0,8704,0,8738],[0,4608,0,0],[0,768,0,0],[0,528,0,0],[0,546,0,0],[0,584,0,0],[3840,3584,0,0],[0,16896,16912,8]],[[0,4352,0,4369],[0,256,0,0],[0,256,0,0],[0,256,0,0],[0,273,0,0],[0,292,0,0],[3840,3840,0,0],[0,8448,8448,132]],[[32768,0,34952,0],[32768,0,292,32768],[61440,61440,0,0],[33825,0,0,0],[34952,0,0,0],[32768,0,0,0],[32768,0,0,0],[32768,0,0,0]],[[16384,0,17476,0],[16384,0,18,18432],[28672,61440,0,0],[16912,8,0,0],[17476,0,0,0],[18432,0,0,0],[49152,0,0,0],[16384,0,8,0]],[[8192,0,8738,0],[8192,0,1,9344],[12288,61440,0,0],[8448,132,0,0],[8738,0,0,0],[9344,0,0,0],[57344,0,0,0],[8192,0,132,0]],[[4096,0,4369,0],[4096,0,0,4680],[4096,61440,0,0],[4096,2114,0,0],[4369,0,0,0],[4680,0,0,0],[61440,0,0,0],[4096,0,2114,0]],[[0,32768,0,34952],[0,32768,0,292],[0,61440,0,0],[0,33825,0,0],[0,34952,0,0],[292,32768,0,0],[61440,32768,0,0],[0,32768,33825,0]],[[0,16384,0,17476],[0,16384,0,18],[0,28672,0,0],[0,16912,0,0],[0,17476,0,0],[18,18432,0,0],[61440,49152,0,0],[0,16384,16912,8]],[[0,8192,0,8738],[0,8192,0,1],[0,12288,0,0],[0,8448,0,0],[0,8738,0,0],[1,9344,0,0],[61440,57344,0,0],[0,8192,8448,132]],[[0,4096,0,4369],[0,4096,0,0],[0,4096,0,0],[0,4096,0,0],[0,4369,0,0],[0,4680,0,0],[61440,61440,0,0],[0,4096,4096,2114]],[[0,0,34952,0],[0,0,4680,0],[0,0,15,15],[16912,8,8,0],[34952,0,8,0],[0,0,8,0],[0,0,8,0],[0,0,8,0]],[[0,0,17476,0],[0,0,292,32768],[0,0,7,15],[8448,132,4,0],[17476,0,4,0],[32768,0,4,0],[0,0,12,0],[0,0,132,0]],[[0,0,8738,0],[0,0,18,18432],[0,0,3,15],[4096,2114,2,0],[8738,0,2,0],[18432,0,2,0],[0,0,14,0],[0,0,2114,0]],[[0,0,4369,0],[0,0,1,9344],[0,0,1,15],[0,33825,1,0],[4369,0,1,0],[9344,0,1,0],[0,0,15,0],[0,0,33825,0]],[[0,0,0,34952],[0,0,0,4680],[0,0,0,15],[0,16912,0,8],[0,34952,0,8],[4680,0,0,8],[0,0,15,8],[0,0,16912,8]],[[0,0,0,17476],[0,0,0,292],[0,0,0,7],[0,8448,0,4],[0,17476,0,4],[292,32768,0,4],[0,0,15,12],[0,0,8448,132]],[[0,0,0,8738],[0,0,0,18],[0,0,0,3],[0,4096,0,2],[0,8738,0,2],[18,18432,0,2],[0,0,15,14],[0,0,4096,2114]],[[0,0,0,4369],[0,0,0,1],[0,0,0,1],[0,0,0,1],[0,4369,0,1],[1,9344,0,1],[0,0,15,15],[0,0,0,33825]],[[0,0,34944,0],[0,0,9344,0],[0,0,240,240],[8448,132,132,0],[34952,0,136,0],[0,0,128,0],[0,0,128,0],[0,0,128,0]],[[0,0,17472,0],[0,0,4672,0],[0,0,112,240],[4096,2114,66,0],[17476,0,68,0],[0,0,72,0],[0,0,192,0],[0,0,2112,0]],[[0,0,8736,0],[0,0,288,32768],[0,0,48,240],[0,33825,33,0],[8738,0,34,0],[32768,0,36,0],[0,0,224,0],[0,0,33824,0]],[[0,0,4368,0],[0,0,16,18432],[0,0,16,240],[0,16912,16,8],[4369,0,17,0],[18432,0,18,0],[0,0,240,0],[0,0,16912,0]],[[0,0,0,34944],[0,0,0,9344],[0,0,0,240],[0,8448,0,132],[0,34952,0,136],[9344,0,1,128],[0,0,240,128],[0,0,8448,128]],[[0,0,0,17472],[0,0,0,4672],[0,0,0,112],[0,4096,0,66],[0,17476,0,68],[4680,0,0,72],[0,0,240,192],[0,0,4096,2112]],[[0,0,0,8736],[0,0,0,288],[0,0,0,48],[0,0,0,33],[0,8738,0,34],[292,32768,0,36],[0,0,240,224],[0,0,0,33824]],[[0,0,0,4368],[0,0,0,16],[0,0,0,16],[0,0,0,16],[0,4369,0,17],[18,18432,0,18],[0,0,240,240],[0,0,0,16912]],[[0,0,34816,0],[0,0,18432,0],[0,0,3840,3840],[4096,2114,2114,0],[34952,0,2184,0],[0,0,2048,0],[0,0,2048,0],[0,0,2048,0]],[[0,0,17408,0],[0,0,9216,0],[0,0,1792,3840],[0,33825,1057,0],[17476,0,1092,0],[0,0,1152,0],[0,0,3072,0],[0,0,33792,0]],[[0,0,8704,0],[0,0,4608,0],[0,0,768,3840],[0,16912,528,8],[8738,0,546,0],[0,0,584,0],[0,0,3584,0],[0,0,16896,0]],[[0,0,4352,0],[0,0,256,32768],[0,0,256,3840],[0,8448,256,132],[4369,0,273,0],[32768,0,292,0],[0,0,3840,0],[0,0,8448,0]],[[0,0,0,34816],[0,0,0,18432],[0,0,0,3840],[0,4096,0,2114],[0,34952,0,2184],[18432,0,18,2048],[0,0,3840,2048],[0,0,4096,2048]],[[0,0,0,17408],[0,0,0,9216],[0,0,0,1792],[0,0,0,1057],[0,17476,0,1092],[9344,0,1,1152],[0,0,3840,3072],[0,0,0,33792]],[[0,0,0,8704],[0,0,0,4608],[0,0,0,768],[0,0,0,528],[0,8738,0,546],[4680,0,0,584],[0,0,3840,3584],[0,0,0,16896]],[[0,0,0,4352],[0,0,0,256],[0,0,0,256],[0,0,0,256],[0,4369,0,273],[292,32768,0,292],[0,0,3840,3840],[0,0,0,8448]],[[0,0,32768,0],[0,0,32768,0],[0,0,61440,61440],[0,33825,33825,0],[34952,0,34952,0],[0,0,32768,0],[0,0,32768,0],[0,0,32768,0]],[[0,0,16384,0],[0,0,16384,0],[0,0,28672,61440],[0,16912,16912,8],[17476,0,17476,0],[0,0,18432,0],[0,0,49152,0],[0,0,16384,0]],[[0,0,8192,0],[0,0,8192,0],[0,0,12288,61440],[0,8448,8448,132],[8738,0,8738,0],[0,0,9344,0],[0,0,57344,0],[0,0,8192,0]],[[0,0,4096,0],[0,0,4096,0],[0,0,4096,61440],[0,4096,4096,2114],[4369,0,4369,0],[0,0,4680,0],[0,0,61440,0],[0,0,4096,0]],[[0,0,0,32768],[0,0,0,32768],[0,0,0,61440],[0,0,0,33825],[0,34952,0,34952],[32768,0,292,32768],[0,0,61440,32768],[0,0,0,32768]],[[0,0,0,16384],[0,0,0,16384],[0,0,0,28672],[0,0,0,16912],[0,17476,0,17476],[18432,0,18,18432],[0,0,61440,49152],[0,0,0,16384]],[[0,0,0,8192],[0,0,0,8192],[0,0,0,12288],[0,0,0,8448],[0,8738,0,8738],[9344,0,1,9344],[0,0,61440,57344],[0,0,0,8192]],[[0,0,0,4096],[0,0,0,4096],[0,0,0,4096],[0,0,0,4096],[0,4369,0,4369],[4680,0,0,4680],[0,0,61440,61440],[0,0,0,4096]]];
+CMGPosition.SHADOWS = [[[257,257,257,257],[513,2052,8208,32832],[255,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0]],[[514,514,514,514],[1026,4104,16416,128],[254,0,0,0],[2,0,0,0],[2,0,0,0],[2,0,0,0],[3,0,0,0],[258,0,0,0]],[[1028,1028,1028,1028],[2052,8208,32832,0],[252,0,0,0],[4,0,0,0],[4,0,0,0],[4,0,0,0],[7,0,0,0],[516,1,0,0]],[[2056,2056,2056,2056],[4104,16416,128,0],[248,0,0,0],[8,0,0,0],[8,0,0,0],[8,0,0,0],[15,0,0,0],[1032,258,0,0]],[[4112,4112,4112,4112],[8208,32832,0,0],[240,0,0,0],[16,0,0,0],[16,0,0,0],[16,0,0,0],[31,0,0,0],[2064,516,1,0]],[[8224,8224,8224,8224],[16416,128,0,0],[224,0,0,0],[32,0,0,0],[32,0,0,0],[32,0,0,0],[63,0,0,0],[4128,1032,258,0]],[[16448,16448,16448,16448],[32832,0,0,0],[192,0,0,0],[64,0,0,0],[64,0,0,0],[64,0,0,0],[127,0,0,0],[8256,2064,516,1]],[[32896,32896,32896,32896],[128,0,0,0],[128,0,0,0],[128,0,0,0],[128,0,0,0],[128,0,0,0],[255,0,0,0],[16512,4128,1032,258]],[[256,257,257,257],[256,1026,4104,16416],[65280,0,0,0],[258,0,0,0],[257,0,0,0],[256,0,0,0],[256,0,0,0],[256,0,0,0]],[[512,514,514,514],[512,2052,8208,32832],[65024,0,0,0],[516,0,0,0],[514,0,0,0],[513,0,0,0],[768,0,0,0],[512,1,0,0]],[[1024,1028,1028,1028],[1024,4104,16416,128],[64512,0,0,0],[1032,0,0,0],[1028,0,0,0],[1026,0,0,0],[1792,0,0,0],[1024,258,0,0]],[[2048,2056,2056,2056],[2048,8208,32832,0],[63488,0,0,0],[2064,0,0,0],[2056,0,0,0],[2052,0,0,0],[3840,0,0,0],[2048,516,1,0]],[[4096,4112,4112,4112],[4096,16416,128,0],[61440,0,0,0],[4128,0,0,0],[4112,0,0,0],[4104,0,0,0],[7936,0,0,0],[4096,1032,258,0]],[[8192,8224,8224,8224],[8192,32832,0,0],[57344,0,0,0],[8256,0,0,0],[8224,0,0,0],[8208,0,0,0],[16128,0,0,0],[8192,2064,516,1]],[[16384,16448,16448,16448],[16384,128,0,0],[49152,0,0,0],[16512,0,0,0],[16448,0,0,0],[16416,0,0,0],[32512,0,0,0],[16384,4128,1032,258]],[[32768,32896,32896,32896],[32768,0,0,0],[32768,0,0,0],[32768,0,0,0],[32896,0,0,0],[32832,0,0,0],[65280,0,0,0],[32768,8256,2064,516]],[[0,257,257,257],[0,513,2052,8208],[0,255,0,0],[516,1,0,0],[257,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]],[[0,514,514,514],[0,1026,4104,16416],[0,254,0,0],[1032,2,0,0],[514,2,0,0],[256,2,0,0],[0,3,0,0],[0,258,0,0]],[[0,1028,1028,1028],[0,2052,8208,32832],[0,252,0,0],[2064,4,0,0],[1028,4,0,0],[513,4,0,0],[0,7,0,0],[0,516,1,0]],[[0,2056,2056,2056],[0,4104,16416,128],[0,248,0,0],[4128,8,0,0],[2056,8,0,0],[1026,8,0,0],[0,15,0,0],[0,1032,258,0]],[[0,4112,4112,4112],[0,8208,32832,0],[0,240,0,0],[8256,16,0,0],[4112,16,0,0],[2052,16,0,0],[0,31,0,0],[0,2064,516,1]],[[0,8224,8224,8224],[0,16416,128,0],[0,224,0,0],[16512,32,0,0],[8224,32,0,0],[4104,32,0,0],[0,63,0,0],[0,4128,1032,258]],[[0,16448,16448,16448],[0,32832,0,0],[0,192,0,0],[32768,64,0,0],[16448,64,0,0],[8208,64,0,0],[0,127,0,0],[0,8256,2064,516]],[[0,32896,32896,32896],[0,128,0,0],[0,128,0,0],[0,128,0,0],[32896,128,0,0],[16416,128,0,0],[0,255,0,0],[0,16512,4128,1032]],[[0,256,257,257],[0,256,1026,4104],[0,65280,0,0],[1032,258,0,0],[257,257,0,0],[0,256,0,0],[0,256,0,0],[0,256,0,0]],[[0,512,514,514],[0,512,2052,8208],[0,65024,0,0],[2064,516,0,0],[514,514,0,0],[0,513,0,0],[0,768,0,0],[0,512,1,0]],[[0,1024,1028,1028],[0,1024,4104,16416],[0,64512,0,0],[4128,1032,0,0],[1028,1028,0,0],[256,1026,0,0],[0,1792,0,0],[0,1024,258,0]],[[0,2048,2056,2056],[0,2048,8208,32832],[0,63488,0,0],[8256,2064,0,0],[2056,2056,0,0],[513,2052,0,0],[0,3840,0,0],[0,2048,516,1]],[[0,4096,4112,4112],[0,4096,16416,128],[0,61440,0,0],[16512,4128,0,0],[4112,4112,0,0],[1026,4104,0,0],[0,7936,0,0],[0,4096,1032,258]],[[0,8192,8224,8224],[0,8192,32832,0],[0,57344,0,0],[32768,8256,0,0],[8224,8224,0,0],[2052,8208,0,0],[0,16128,0,0],[0,8192,2064,516]],[[0,16384,16448,16448],[0,16384,128,0],[0,49152,0,0],[0,16512,0,0],[16448,16448,0,0],[4104,16416,0,0],[0,32512,0,0],[0,16384,4128,1032]],[[0,32768,32896,32896],[0,32768,0,0],[0,32768,0,0],[0,32768,0,0],[32896,32896,0,0],[8208,32832,0,0],[0,65280,0,0],[0,32768,8256,2064]],[[0,0,257,257],[0,0,513,2052],[0,0,255,0],[2064,516,1,0],[257,257,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],[[0,0,514,514],[0,0,1026,4104],[0,0,254,0],[4128,1032,2,0],[514,514,2,0],[0,256,2,0],[0,0,3,0],[0,0,258,0]],[[0,0,1028,1028],[0,0,2052,8208],[0,0,252,0],[8256,2064,4,0],[1028,1028,4,0],[0,513,4,0],[0,0,7,0],[0,0,516,1]],[[0,0,2056,2056],[0,0,4104,16416],[0,0,248,0],[16512,4128,8,0],[2056,2056,8,0],[256,1026,8,0],[0,0,15,0],[0,0,1032,258]],[[0,0,4112,4112],[0,0,8208,32832],[0,0,240,0],[32768,8256,16,0],[4112,4112,16,0],[513,2052,16,0],[0,0,31,0],[0,0,2064,516]],[[0,0,8224,8224],[0,0,16416,128],[0,0,224,0],[0,16512,32,0],[8224,8224,32,0],[1026,4104,32,0],[0,0,63,0],[0,0,4128,1032]],[[0,0,16448,16448],[0,0,32832,0],[0,0,192,0],[0,32768,64,0],[16448,16448,64,0],[2052,8208,64,0],[0,0,127,0],[0,0,8256,2064]],[[0,0,32896,32896],[0,0,128,0],[0,0,128,0],[0,0,128,0],[32896,32896,128,0],[4104,16416,128,0],[0,0,255,0],[0,0,16512,4128]],[[0,0,256,257],[0,0,256,1026],[0,0,65280,0],[4128,1032,258,0],[257,257,257,0],[0,0,256,0],[0,0,256,0],[0,0,256,0]],[[0,0,512,514],[0,0,512,2052],[0,0,65024,0],[8256,2064,516,0],[514,514,514,0],[0,0,513,0],[0,0,768,0],[0,0,512,1]],[[0,0,1024,1028],[0,0,1024,4104],[0,0,64512,0],[16512,4128,1032,0],[1028,1028,1028,0],[0,256,1026,0],[0,0,1792,0],[0,0,1024,258]],[[0,0,2048,2056],[0,0,2048,8208],[0,0,63488,0],[32768,8256,2064,0],[2056,2056,2056,0],[0,513,2052,0],[0,0,3840,0],[0,0,2048,516]],[[0,0,4096,4112],[0,0,4096,16416],[0,0,61440,0],[0,16512,4128,0],[4112,4112,4112,0],[256,1026,4104,0],[0,0,7936,0],[0,0,4096,1032]],[[0,0,8192,8224],[0,0,8192,32832],[0,0,57344,0],[0,32768,8256,0],[8224,8224,8224,0],[513,2052,8208,0],[0,0,16128,0],[0,0,8192,2064]],[[0,0,16384,16448],[0,0,16384,128],[0,0,49152,0],[0,0,16512,0],[16448,16448,16448,0],[1026,4104,16416,0],[0,0,32512,0],[0,0,16384,4128]],[[0,0,32768,32896],[0,0,32768,0],[0,0,32768,0],[0,0,32768,0],[32896,32896,32896,0],[2052,8208,32832,0],[0,0,65280,0],[0,0,32768,8256]],[[0,0,0,257],[0,0,0,513],[0,0,0,255],[8256,2064,516,1],[257,257,257,1],[0,0,0,1],[0,0,0,1],[0,0,0,1]],[[0,0,0,514],[0,0,0,1026],[0,0,0,254],[16512,4128,1032,2],[514,514,514,2],[0,0,256,2],[0,0,0,3],[0,0,0,258]],[[0,0,0,1028],[0,0,0,2052],[0,0,0,252],[32768,8256,2064,4],[1028,1028,1028,4],[0,0,513,4],[0,0,0,7],[0,0,0,516]],[[0,0,0,2056],[0,0,0,4104],[0,0,0,248],[0,16512,4128,8],[2056,2056,2056,8],[0,256,1026,8],[0,0,0,15],[0,0,0,1032]],[[0,0,0,4112],[0,0,0,8208],[0,0,0,240],[0,32768,8256,16],[4112,4112,4112,16],[0,513,2052,16],[0,0,0,31],[0,0,0,2064]],[[0,0,0,8224],[0,0,0,16416],[0,0,0,224],[0,0,16512,32],[8224,8224,8224,32],[256,1026,4104,32],[0,0,0,63],[0,0,0,4128]],[[0,0,0,16448],[0,0,0,32832],[0,0,0,192],[0,0,32768,64],[16448,16448,16448,64],[513,2052,8208,64],[0,0,0,127],[0,0,0,8256]],[[0,0,0,32896],[0,0,0,128],[0,0,0,128],[0,0,0,128],[32896,32896,32896,128],[1026,4104,16416,128],[0,0,0,255],[0,0,0,16512]],[[0,0,0,256],[0,0,0,256],[0,0,0,65280],[16512,4128,1032,258],[257,257,257,257],[0,0,0,256],[0,0,0,256],[0,0,0,256]],[[0,0,0,512],[0,0,0,512],[0,0,0,65024],[32768,8256,2064,516],[514,514,514,514],[0,0,0,513],[0,0,0,768],[0,0,0,512]],[[0,0,0,1024],[0,0,0,1024],[0,0,0,64512],[0,16512,4128,1032],[1028,1028,1028,1028],[0,0,256,1026],[0,0,0,1792],[0,0,0,1024]],[[0,0,0,2048],[0,0,0,2048],[0,0,0,63488],[0,32768,8256,2064],[2056,2056,2056,2056],[0,0,513,2052],[0,0,0,3840],[0,0,0,2048]],[[0,0,0,4096],[0,0,0,4096],[0,0,0,61440],[0,0,16512,4128],[4112,4112,4112,4112],[0,256,1026,4104],[0,0,0,7936],[0,0,0,4096]],[[0,0,0,8192],[0,0,0,8192],[0,0,0,57344],[0,0,32768,8256],[8224,8224,8224,8224],[0,513,2052,8208],[0,0,0,16128],[0,0,0,8192]],[[0,0,0,16384],[0,0,0,16384],[0,0,0,49152],[0,0,0,16512],[16448,16448,16448,16448],[256,1026,4104,16416],[0,0,0,32512],[0,0,0,16384]],[[0,0,0,32768],[0,0,0,32768],[0,0,0,32768],[0,0,0,32768],[32896,32896,32896,32896],[513,2052,8208,32832],[0,0,0,65280],[0,0,0,32768]]];

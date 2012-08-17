@@ -57,42 +57,40 @@ The board and the square codes (note that we don't use the 0x88 representation h
 The board in four bitboard quadrants (due to integer limitations in JavaScript):
 
     +---+---+---+---+---+---+---+---+
-   8|   |   |   |   |   |   |   |   |
-    +-             -+-             -+
-   7|               |               |
-    +-      2      -+-      3      -+
-   6|               |               |
-    +-             -+-             -+
-   5|   |   |   |   |   |   |   |   |
+   8|   |   |   |       |   |   |   |
+    +-              3              -+
+   7|                               |
     +---+---+---+---+---+---+---+---+
-   4|   |   |   |   |   |   |   |   |
-    +-             -+-             -+
-   3|               |               |
-    +-      0      -+-      1      -+
-   2|               |               |
-    +-             -+-             -+
-   1|   |   |   |   |   |   |   |   |
+   6|                               |
+    +-              2              -+
+   5|                               |
+    +---+---+---+---+---+---+---+---+
+   4|                               |
+    +-              1              -+
+   3|                               |
+    +---+---+---+---+---+---+---+---+
+   2|                               |
+    +-              0              -+
+   1|   |   |   |       |   |   |   |
     +---+---+---+---+---+---+---+---+
       A   B   C   D   E   F   G   H
 
-Numbering of each bitboard quadrant (hexadecimal here)
+Numbering of each bitboard quadrant (hexadecimal here):
 
-    +---+---+---+---+
-   4| C | D | E | F |
-    +---+---+---+---+
-   3| 8 | 9 | A | B |
-    +---+---+---+---+
-   2| 4 | 5 | 6 | 7 |
-    +---+---+---+---+
-   1| 0 | 1 | 2 | 3 |
-    +---+---+---+---+
-      A   B   C   D
+    +---+---+---+---+---+---+---+---+
+   2| 8 | 9 | A | B | C | D | E | F |
+    +---+---+---+---+---+---+---+---+
+   1| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+    +---+---+---+---+---+---+---+---+
+      A   B   C   D   E   F   G   H
 
 
 Todos
 =====
 
 * Operations of loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves and loadShadows can be done in one loop block
+* Eliminate all debug variables, which may begin with 'trace'
+* Eliminate all console.log()
 
 Definitions
 ===========
@@ -438,9 +436,9 @@ quadrantRepresentation = (moves) ->
 # =============================================================================
 # Load actual movement bitboards
 
-bitBoardStringArrayToIntegers = (bitBoardStringArray, offsetY, offsetX, trace = false) ->
+bitBoardStringArrayToIntegers = (bitBoardStringArray, offsetY, offsetX, traceSquare = false) ->
     # First, determine the 8x8 square that represents the bitboard
-    if trace
+    if traceSquare
         console.log('offsetY: ' + offsetY)
         console.log('offsetX: ' + offsetX)
     start = 7 - offsetY
@@ -448,50 +446,45 @@ bitBoardStringArrayToIntegers = (bitBoardStringArray, offsetY, offsetX, trace = 
     if start < 7
         rectangle_15_8 = rectangle_15_8.slice(0, 8) # Remember: slice ends at 8 - 1 = 7
 
-    if trace
+    if traceSquare
         console.log(rectangle_15_8)
 
     square_8_8 = []
     for line_15_8 in rectangle_15_8
         square_8_8.push(line_15_8.substr(offsetX, 8))
 
-    if trace
+    if traceSquare
         console.log(square_8_8)
 
     # Second, split the bitboard into four quadrants
-    topLeft = []
-    topRight = []
-    bottomLeft = []
-    bottomRight = []
-    for line, lineId in square_8_8
-        if lineId < 4
-            topLeft.push(line.substr(0, 4))
-            topRight.push(line.substr(4))
-        else
-            bottomLeft.push(line.substr(0, 4))
-            bottomRight.push(line.substr(4))
+    quadrants = [[], [], [], []]
+    for lineId in [0..7]
+        quadrantId = Math.floor(lineId / 2)
+        quadrants[quadrantId].push( square_8_8[lineId].split('').reverse().join('') ) # String reversed, http://stackoverflow.com/a/1611449
 
     # Finally, return the four quadrants as an array of four integers
     # * note that strings constitute the "simplest" way of representing binary numbers in JS
-    out = [
-        parseInt(bottomLeft.join(''), 2),
-        parseInt(bottomRight.join(''), 2),
-        parseInt(topLeft.join(''), 2),
-        parseInt(topRight.join(''), 2)
-    ]
+    out = []
+    for quadrant in quadrants
+        out.push(parseInt(quadrant.join(''), 2))
 
-    if trace
+    out.reverse()
+
+    if traceSquare
         console.log(out)
         exit
 
     return out
 
-loadMoves = (bitBoardStringArray) ->
+loadMoves = (bitBoardStringArray, traceSquare = false) ->
     out = []
 
     for iRow in [7..0]      # 1 .. 8
         for iCol in [7..0]  # A .. H
-            out.push(bitBoardStringArrayToIntegers( bitBoardStringArray, iRow, iCol ))
+            traceNow = false
+            if traceSquare is (8 * (7-iRow) + (7-iCol))
+                traceNow = true
+            out.push(bitBoardStringArrayToIntegers( bitBoardStringArray, iRow, iCol, traceNow ))
 
     return out
 

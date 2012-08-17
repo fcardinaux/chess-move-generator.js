@@ -118,7 +118,7 @@ module.exports = {
       calculatedEndPositionStrings = [];
       for (_j = 0, _len2 = calculatedMoves.length; _j < _len2; _j++) {
         calculatedMove = calculatedMoves[_j];
-        calculatedEndPositionStrings.push(calculatedMove.newPosition);
+        calculatedEndPositionStrings.push(calculatedMove.newPosition.toString());
       }
       result = compareArrays(expectedEndPositionStrings, calculatedEndPositionStrings);
       _results.push(assert.eql([[], []], result));

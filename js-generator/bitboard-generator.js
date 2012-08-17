@@ -57,42 +57,40 @@ The board and the square codes (note that we don't use the 0x88 representation h
 The board in four bitboard quadrants (due to integer limitations in JavaScript):
 
     +---+---+---+---+---+---+---+---+
-   8|   |   |   |   |   |   |   |   |
-    +-             -+-             -+
-   7|               |               |
-    +-      2      -+-      3      -+
-   6|               |               |
-    +-             -+-             -+
-   5|   |   |   |   |   |   |   |   |
+   8|   |   |   |       |   |   |   |
+    +-              3              -+
+   7|                               |
     +---+---+---+---+---+---+---+---+
-   4|   |   |   |   |   |   |   |   |
-    +-             -+-             -+
-   3|               |               |
-    +-      0      -+-      1      -+
-   2|               |               |
-    +-             -+-             -+
-   1|   |   |   |   |   |   |   |   |
+   6|                               |
+    +-              2              -+
+   5|                               |
+    +---+---+---+---+---+---+---+---+
+   4|                               |
+    +-              1              -+
+   3|                               |
+    +---+---+---+---+---+---+---+---+
+   2|                               |
+    +-              0              -+
+   1|   |   |   |       |   |   |   |
     +---+---+---+---+---+---+---+---+
       A   B   C   D   E   F   G   H
 
-Numbering of each bitboard quadrant (hexadecimal here)
+Numbering of each bitboard quadrant (hexadecimal here):
 
-    +---+---+---+---+
-   4| C | D | E | F |
-    +---+---+---+---+
-   3| 8 | 9 | A | B |
-    +---+---+---+---+
-   2| 4 | 5 | 6 | 7 |
-    +---+---+---+---+
-   1| 0 | 1 | 2 | 3 |
-    +---+---+---+---+
-      A   B   C   D
+    +---+---+---+---+---+---+---+---+
+   2| 8 | 9 | A | B | C | D | E | F |
+    +---+---+---+---+---+---+---+---+
+   1| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+    +---+---+---+---+---+---+---+---+
+      A   B   C   D   E   F   G   H
 
 
 Todos
 =====
 
 * Operations of loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves and loadShadows can be done in one loop block
+* Eliminate all debug variables, which may begin with 'trace'
+* Eliminate all console.log()
 
 Definitions
 ===========
@@ -156,51 +154,50 @@ quadrantRepresentation = function(moves) {
   return JSON.stringify(moves);
 };
 
-bitBoardStringArrayToIntegers = function(bitBoardStringArray, offsetY, offsetX, trace) {
-  var bottomLeft, bottomRight, line, lineId, line_15_8, out, rectangle_15_8, square_8_8, start, topLeft, topRight, _i, _len, _len2;
-  if (trace == null) trace = false;
-  if (trace) {
+bitBoardStringArrayToIntegers = function(bitBoardStringArray, offsetY, offsetX, traceSquare) {
+  var lineId, line_15_8, out, quadrant, quadrantId, quadrants, rectangle_15_8, square_8_8, start, _i, _j, _len, _len2;
+  if (traceSquare == null) traceSquare = false;
+  if (traceSquare) {
     console.log('offsetY: ' + offsetY);
     console.log('offsetX: ' + offsetX);
   }
   start = 7 - offsetY;
   rectangle_15_8 = bitBoardStringArray.slice(start);
   if (start < 7) rectangle_15_8 = rectangle_15_8.slice(0, 8);
-  if (trace) console.log(rectangle_15_8);
+  if (traceSquare) console.log(rectangle_15_8);
   square_8_8 = [];
   for (_i = 0, _len = rectangle_15_8.length; _i < _len; _i++) {
     line_15_8 = rectangle_15_8[_i];
     square_8_8.push(line_15_8.substr(offsetX, 8));
   }
-  if (trace) console.log(square_8_8);
-  topLeft = [];
-  topRight = [];
-  bottomLeft = [];
-  bottomRight = [];
-  for (lineId = 0, _len2 = square_8_8.length; lineId < _len2; lineId++) {
-    line = square_8_8[lineId];
-    if (lineId < 4) {
-      topLeft.push(line.substr(0, 4));
-      topRight.push(line.substr(4));
-    } else {
-      bottomLeft.push(line.substr(0, 4));
-      bottomRight.push(line.substr(4));
-    }
+  if (traceSquare) console.log(square_8_8);
+  quadrants = [[], [], [], []];
+  for (lineId = 0; lineId <= 7; lineId++) {
+    quadrantId = Math.floor(lineId / 2);
+    quadrants[quadrantId].push(square_8_8[lineId].split('').reverse().join(''));
   }
-  out = [parseInt(bottomLeft.join(''), 2), parseInt(bottomRight.join(''), 2), parseInt(topLeft.join(''), 2), parseInt(topRight.join(''), 2)];
-  if (trace) {
+  out = [];
+  for (_j = 0, _len2 = quadrants.length; _j < _len2; _j++) {
+    quadrant = quadrants[_j];
+    out.push(parseInt(quadrant.join(''), 2));
+  }
+  out.reverse();
+  if (traceSquare) {
     console.log(out);
     exit;
   }
   return out;
 };
 
-loadMoves = function(bitBoardStringArray) {
-  var iCol, iRow, out;
+loadMoves = function(bitBoardStringArray, traceSquare) {
+  var iCol, iRow, out, traceNow;
+  if (traceSquare == null) traceSquare = false;
   out = [];
   for (iRow = 7; iRow >= 0; iRow--) {
     for (iCol = 7; iCol >= 0; iCol--) {
-      out.push(bitBoardStringArrayToIntegers(bitBoardStringArray, iRow, iCol));
+      traceNow = false;
+      if (traceSquare === (8 * (7 - iRow) + (7 - iCol))) traceNow = true;
+      out.push(bitBoardStringArrayToIntegers(bitBoardStringArray, iRow, iCol, traceNow));
     }
   }
   return out;
