@@ -100,7 +100,7 @@ Definitions
   But it might leave the own king in check, castle while in check
   or castle over a checked square." ( -> Jonatan Pettersson's Move generation)
 */
-var bishopBitBoardStringArray, bitBoardStringArrayToIntegers, kingBitBoardStringArray, knightBitBoardStringArray, loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves, loadShadows, pawnMoveBitBoardStringArray, pawnStartingMoveBitBoardStringArray, pawnTakeBitBoardStringArray, quadrantRepresentation, queenBitBoardStringArray, rookBitBoardStringArray, shadowBitBoardStringArrays;
+var binLeftShift, bishopBitBoardStringArray, bitBoardStringArrayToIntegers, kingBitBoardStringArray, knightBitBoardStringArray, loadMoves, loadPawnNonTakingMoves, loadPawnTakingMoves, loadShadows, pawnMoveBitBoardStringArray, pawnStartingMoveBitBoardStringArray, pawnTakeBitBoardStringArray, quadrantRepresentation, queenBitBoardStringArray, rookBitBoardStringArray, shadowBitBoardStringArrays, valueOfSquare;
 
 queenBitBoardStringArray = ['100000010000001', '010000010000010', '001000010000100', '000100010001000', '000010010010000', '000001010100000', '000000111000000', '111111101111111', '000000111000000', '000001010100000', '000010010010000', '000100010001000', '001000010000100', '010000010000010', '100000010000001'];
 
@@ -120,38 +120,68 @@ pawnTakeBitBoardStringArray = ['000000000000000', '000000000000000', '0000000000
 
 shadowBitBoardStringArrays = [['000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['000000000000001', '000000000000010', '000000000000100', '000000000001000', '000000000010000', '000000000100000', '000000001000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000011111111', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000001000000', '000000000100000', '000000000010000', '000000000001000', '000000000000100', '000000000000010', '000000000000001'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000100000000', '000001000000000', '000010000000000', '000100000000000', '001000000000000', '010000000000000', '100000000000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '111111110000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['100000000000000', '010000000000000', '001000000000000', '000100000000000', '000010000000000', '000001000000000', '000000100000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000']];
 
-module.exports.generateJavascriptLines = function(dataPrefix, headerLine) {
-  var lines, moves, shadows;
+module.exports.generateJavascriptLines = function(bitBoardDataPrefix, positionDataPrefix, headerLine) {
+  var lines, moves, shadows, square;
   if (headerLine == null) headerLine = '';
   lines = [];
   if (headerLine !== '') lines.push("// " + headerLine);
   moves = loadMoves(queenBitBoardStringArray);
-  lines.push("" + dataPrefix + "QUEEN_MOVES = " + (quadrantRepresentation(moves)) + ";");
+  lines.push("" + positionDataPrefix + "QUEEN_MOVES = " + (quadrantRepresentation(moves)) + ";");
   moves = loadMoves(rookBitBoardStringArray);
-  lines.push("" + dataPrefix + "ROOK_MOVES = " + (quadrantRepresentation(moves)) + ";");
+  lines.push("" + positionDataPrefix + "ROOK_MOVES = " + (quadrantRepresentation(moves)) + ";");
   moves = loadMoves(bishopBitBoardStringArray);
-  lines.push("" + dataPrefix + "BISHOP_MOVES = " + (quadrantRepresentation(moves)) + ";");
+  lines.push("" + positionDataPrefix + "BISHOP_MOVES = " + (quadrantRepresentation(moves)) + ";");
   moves = loadMoves(knightBitBoardStringArray);
-  lines.push("" + dataPrefix + "KNIGHT_MOVES = " + (quadrantRepresentation(moves)) + ";");
+  lines.push("" + positionDataPrefix + "KNIGHT_MOVES = " + (quadrantRepresentation(moves)) + ";");
   moves = loadMoves(kingBitBoardStringArray);
-  lines.push("" + dataPrefix + "KING_MOVES_WITHOUT_CASTLING = " + (quadrantRepresentation(moves)) + ";");
+  lines.push("" + positionDataPrefix + "KING_MOVES_WITHOUT_CASTLING = " + (quadrantRepresentation(moves)) + ";");
   moves = {
     b: loadPawnNonTakingMoves('b'),
     w: loadPawnNonTakingMoves('w')
   };
-  lines.push("" + dataPrefix + "PAWN_NON_TAKING_MOVES = {\n    b: " + (quadrantRepresentation(moves['b'])) + ", \n    w: " + (quadrantRepresentation(moves['w'])) + "\n};");
+  lines.push("" + positionDataPrefix + "PAWN_NON_TAKING_MOVES = {\n    b: " + (quadrantRepresentation(moves['b'])) + ", \n    w: " + (quadrantRepresentation(moves['w'])) + "\n};");
   moves = {
     b: loadPawnTakingMoves('b'),
     w: loadPawnTakingMoves('w')
   };
-  lines.push("" + dataPrefix + "PAWN_TAKING_MOVES = {\n    b: " + (quadrantRepresentation(moves['b'])) + ", \n    w: " + (quadrantRepresentation(moves['w'])) + "\n};");
+  lines.push("" + positionDataPrefix + "PAWN_TAKING_MOVES = {\n    b: " + (quadrantRepresentation(moves['b'])) + ", \n    w: " + (quadrantRepresentation(moves['w'])) + "\n};");
   shadows = loadShadows();
-  lines.push("" + dataPrefix + "SHADOWS = " + (quadrantRepresentation(shadows)) + ";");
+  lines.push("" + positionDataPrefix + "SHADOWS = " + (quadrantRepresentation(shadows)) + ";");
+  lines.push("" + bitBoardDataPrefix + "SQUARE_VALUES = [");
+  for (square = 0; square <= 63; square++) {
+    lines.push("    " + (JSON.stringify(valueOfSquare(square))) + ",");
+  }
+  lines.push("];");
   return lines;
 };
 
 quadrantRepresentation = function(moves) {
   return JSON.stringify(moves);
+};
+
+valueOfSquare = function(square) {
+  var originValue;
+  originValue = [1, 0, 0, 0];
+  return binLeftShift(originValue, square);
+};
+
+binLeftShift = function(bb, n) {
+  var carry, qKey, res, shiftedBb;
+  res = [];
+  while (n >= 16) {
+    bb[3] = bb[2];
+    bb[2] = bb[1];
+    bb[1] = bb[0];
+    bb[0] = 0;
+    n -= 16;
+  }
+  carry = 0;
+  for (qKey = 0; qKey <= 3; qKey++) {
+    shiftedBb = (bb[qKey] << n) + carry;
+    res[qKey] = shiftedBb & 0xffff;
+    carry = shiftedBb >> 16;
+  }
+  return res;
 };
 
 bitBoardStringArrayToIntegers = function(bitBoardStringArray, offsetY, offsetX, traceSquare) {

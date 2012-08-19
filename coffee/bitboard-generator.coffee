@@ -393,45 +393,76 @@ shadowBitBoardStringArrays = [
 # =============================================================================
 # Exported function
 
-module.exports.generateJavascriptLines = (dataPrefix, headerLine = '') ->
+module.exports.generateJavascriptLines = (bitBoardDataPrefix, positionDataPrefix, headerLine = '') ->
     lines = []
 
     if headerLine isnt ''
         lines.push("// #{headerLine}")
 
     moves = loadMoves(queenBitBoardStringArray)
-    lines.push("#{dataPrefix}QUEEN_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{positionDataPrefix}QUEEN_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(rookBitBoardStringArray)
-    lines.push("#{dataPrefix}ROOK_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{positionDataPrefix}ROOK_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(bishopBitBoardStringArray)
-    lines.push("#{dataPrefix}BISHOP_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{positionDataPrefix}BISHOP_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(knightBitBoardStringArray)
-    lines.push("#{dataPrefix}KNIGHT_MOVES = #{quadrantRepresentation(moves)};")
+    lines.push("#{positionDataPrefix}KNIGHT_MOVES = #{quadrantRepresentation(moves)};")
 
     moves = loadMoves(kingBitBoardStringArray)
-    lines.push("#{dataPrefix}KING_MOVES_WITHOUT_CASTLING = #{quadrantRepresentation(moves)};")
+    lines.push("#{positionDataPrefix}KING_MOVES_WITHOUT_CASTLING = #{quadrantRepresentation(moves)};")
 
     moves =
         b: loadPawnNonTakingMoves('b')
         w: loadPawnNonTakingMoves('w')
-    lines.push("#{dataPrefix}PAWN_NON_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
+    lines.push("#{positionDataPrefix}PAWN_NON_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
 
     moves =
         b: loadPawnTakingMoves('b')
         w: loadPawnTakingMoves('w')
-    lines.push("#{dataPrefix}PAWN_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
+    lines.push("#{positionDataPrefix}PAWN_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
 
     shadows = loadShadows()
-    lines.push("#{dataPrefix}SHADOWS = #{quadrantRepresentation(shadows)};")
+    lines.push("#{positionDataPrefix}SHADOWS = #{quadrantRepresentation(shadows)};")
+
+    lines.push("#{bitBoardDataPrefix}SQUARE_VALUES = [")
+    for square in [0..63]
+        lines.push("    #{JSON.stringify( valueOfSquare(square) )},")
+    lines.push("];")
 
     return lines
 
 quadrantRepresentation = (moves) ->
     #"[#{moves[0]}, #{moves[1]}, #{moves[2]}, #{moves[3]}]"
     JSON.stringify(moves)
+
+# =============================================================================
+# Load the bitboard associated to each square
+
+valueOfSquare = (square) ->
+    originValue = [1, 0, 0, 0] # quadrants
+    binLeftShift(originValue, square)
+
+binLeftShift = (bb, n) ->
+    res = []
+
+    # Left shift (<< n) is limited to n < 32, so eliminate lost quadrants first
+    while n >= 16
+        # bb[3] is lost
+        bb[3] = bb[2]
+        bb[2] = bb[1]
+        bb[1] = bb[0]
+        bb[0] = 0
+        n -= 16
+
+    carry = 0
+    for qKey in [0..3]
+        shiftedBb = (bb[qKey] << n) + carry
+        res[qKey] = shiftedBb & 0xffff
+        carry = shiftedBb >> 16
+    return res
 
 # =============================================================================
 # Load actual movement bitboards
