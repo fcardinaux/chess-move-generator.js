@@ -13,6 +13,8 @@ CMGBitBoard = (function() {
 
   CMGBitBoard.EMPTY_BOARD = [0, 0, 0, 0];
 
+  CMGBitBoard.FULL_BOARD = [0xffff, 0xffff, 0xffff, 0xffff];
+
   CMGBitBoard.binAnd = function(bb1, bb2) {
     return [bb1[0] & bb2[0], bb1[1] & bb2[1], bb1[2] & bb2[2], bb1[3] & bb2[3]];
   };
@@ -27,6 +29,12 @@ CMGBitBoard = (function() {
 
   CMGBitBoard.binNot = function(bb) {
     return [~bb[0], ~bb[1], ~bb[2], ~bb[3]];
+  };
+
+  CMGBitBoard.valueOfSquare = function(square) {
+    var originValue;
+    originValue = [1, 0, 0, 0];
+    return CMGBitBoard.binLeftShift(originValue, square);
   };
 
   CMGBitBoard.binLeftShift = function(bb, n) {
@@ -218,7 +226,6 @@ CMGPosition = (function() {
     if (allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) bqChar = 'q';
     if (allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING) bkChar = 'k';
     allowedCastlingString = [wkChar, wqChar, bkChar, bqChar].join('');
-    console.log('ac: ' + allowedCastlingString);
     return allowedCastlingString;
   };
 
@@ -264,8 +271,19 @@ CMGPosition = (function() {
     return this.SHADOWS[square][direction ^ 4];
   };
 
+  CMGPosition._oppositeColor = function(color, defaultValue) {
+    if (defaultValue == null) defaultValue = false;
+    switch (color) {
+      case "b":
+        return "w";
+      case "w":
+        return "b";
+    }
+    return defaultValue;
+  };
+
   function CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber) {
-    var piece, _i, _len, _ref;
+    var piece, squareId, _ref;
     this.pieces = pieces;
     this.turn = turn;
     this.allowedCastling = allowedCastling != null ? allowedCastling : 0;
@@ -274,7 +292,7 @@ CMGPosition = (function() {
     this.moveNumber = moveNumber != null ? moveNumber : 0;
     /*
             Constructor
-            @param pieces ([CMGPiece])
+            @param pieces (Object) With object keys = square ids and object values = instances of CMGPiece
             @param turn (false|"b"|"w")
             @param allowedCastling (integer)
             @param enPassantSquare (false|integer where integer is between 0 (bottom right corner) and 077 (top right corner)
@@ -284,14 +302,14 @@ CMGPosition = (function() {
     this.bitBoards = {};
     this._generateBitBoards();
     this.piecesOfColor = {
-      b: [],
-      w: []
+      b: {},
+      w: {}
     };
     if (this.pieces) {
       _ref = this.pieces;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        piece = _ref[_i];
-        this.piecesOfColor[piece.color].push(piece);
+      for (squareId in _ref) {
+        piece = _ref[squareId];
+        this.piecesOfColor[piece.color][squareId] = piece;
       }
     }
   }
@@ -301,13 +319,7 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype.opponentColorCode = function() {
-    switch (this.turn) {
-      case "b":
-        return "w";
-      case "w":
-        return "b";
-    }
-    return false;
+    return CMGPosition._oppositeColor(this.turn);
   };
 
   CMGPosition.prototype.toString = function() {
@@ -331,51 +343,11 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype.allPossibleMovesFromSquare = function(squareKey) {
-    var allShadows, move, newPieceType, nonTakingMoves, out, piece, playerShadows, pseudoMove, pseudoMoveBitboard, pseudoMoves, shadowDirections, takenOnSquare, takenPiece, target, targets, toPiece, _i, _j, _k, _len, _len2, _len3, _ref;
-    pseudoMoveBitboard = 0x0;
+    var move, newPieceType, out, piece, pseudoMove, pseudoMoveBitboard, pseudoMoves, takenOnSquare, takenPiece, target, targets, toPiece, _i, _j, _k, _len, _len2, _len3, _ref;
     piece = this._getPieceOnSquare(squareKey);
     if (!piece) return 0x0;
     if (piece.color !== this.turn) return 0x0;
-    switch (piece.type) {
-      case 'r':
-        playerShadows = this._computeShadows(squareKey, [0, 2, 4, 6], this.turn);
-        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.ROOK_MOVES[squareKey], CMGBitBoard.binNot(playerShadows));
-        break;
-      case 'n':
-        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.KNIGHT_MOVES[squareKey], CMGBitBoard.binNot(this.bitBoards.allPiecesOfColor[this.turn]));
-        break;
-      case 'b':
-        playerShadows = this._computeShadows(squareKey, [1, 3, 5, 7], this.turn);
-        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.BISHOP_MOVES[squareKey], CMGBitBoard.binNot(playerShadows));
-        break;
-      case 'q':
-        playerShadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
-        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.QUEEN_MOVES[squareKey], CMGBitBoard.binNot(playerShadows));
-        break;
-      case 'k':
-        playerShadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], this.turn);
-        pseudoMoveBitboard = CMGBitBoard.binAnd(CMGPosition.KING_MOVES_WITHOUT_CASTLING[squareKey], CMGBitBoard.binNot(playerShadows));
-        if (this.turn === 'b') {
-          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty))) {
-            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_BLACK_KING.move);
-          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty))) {
-            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_BLACK_QUEEN.move);
-          }
-        } else {
-          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty))) {
-            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_WHITE_KING.move);
-          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) && CMGBitBoard.binNot(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty))) {
-            pseudoMoveBitboard = CMGBitBoard.binOr(pseudoMoveBitboard, CMGPosition.CASTLING_WHITE_QUEEN.move);
-          }
-        }
-        break;
-      case 'p':
-        if (this.turn === 'w') shadowDirections = [0];
-        if (this.turn === 'b') shadowDirections = [4];
-        allShadows = this._computeShadows(squareKey, shadowDirections);
-        nonTakingMoves = CMGBitBoard.binAnd(CMGPosition.PAWN_NON_TAKING_MOVES[squareKey], CMGBitBoard.binNot(allShadows));
-        pseudoMoveBitboard = CMGBitBoard.binOr(CMGPosition.PAWN_TAKING_MOVES[squareKey], nonTakingMoves);
-    }
+    pseudoMoveBitboard = this._bitBoardOfPseudoMovesFromSquare(squareKey, piece, this.turn);
     pseudoMoves = [];
     targets = CMGBitBoard.bitBoardToSquareKeyArray(pseudoMoveBitboard);
     for (_i = 0, _len = targets.length; _i < _len; _i++) {
@@ -492,23 +464,94 @@ CMGPosition = (function() {
     */    return 'todo';
   };
 
-  CMGPosition.prototype._computeShadows = function(squareKey, directions, pieceColorFilter) {
-    var direction, piece, pieces, shadowMap, _i, _j, _len, _len2;
-    if (pieceColorFilter == null) pieceColorFilter = false;
+  CMGPosition.prototype._bitBoardOfPseudoMovesFromSquare = function(squareKey, movedPiece, stopAtColor, stopAfterColor) {
+    var allShadows, nonTakingMoves, out, shadowDirections, shadows;
+    if (stopAtColor == null) stopAtColor = false;
+    if (stopAfterColor == null) stopAfterColor = false;
+    out = CMGBitBoard.EMPTY_BOARD;
+    if (!movedPiece) return CMGBitBoard.EMPTY_BOARD;
+    switch (movedPiece.type) {
+      case 'r':
+        shadows = this._computeShadows(squareKey, [0, 2, 4, 6], stopAtColor, stopAfterColor);
+        out = CMGBitBoard.binAnd(CMGPosition.ROOK_MOVES[squareKey], CMGBitBoard.binNot(shadows));
+        break;
+      case 'n':
+        out = CMGBitBoard.binAnd(CMGPosition.KNIGHT_MOVES[squareKey], CMGBitBoard.binNot(this.bitBoards.allPiecesOfColor[this.turn]));
+        break;
+      case 'b':
+        shadows = this._computeShadows(squareKey, [1, 3, 5, 7], stopAtColor, stopAfterColor);
+        out = CMGBitBoard.binAnd(CMGPosition.BISHOP_MOVES[squareKey], CMGBitBoard.binNot(shadows));
+        break;
+      case 'q':
+        shadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], stopAtColor, stopAfterColor);
+        out = CMGBitBoard.binAnd(CMGPosition.QUEEN_MOVES[squareKey], CMGBitBoard.binNot(shadows));
+        break;
+      case 'k':
+        shadows = this._computeShadows(squareKey, [0, 1, 2, 3, 4, 5, 6, 7], stopAtColor, stopAfterColor);
+        out = CMGBitBoard.binAnd(CMGPosition.KING_MOVES_WITHOUT_CASTLING[squareKey], CMGBitBoard.binNot(shadows));
+        if (movedPiece.color === 'b') {
+          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty))) {
+            out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_BLACK_KING.move);
+          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty))) {
+            out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_BLACK_QUEEN.move);
+          }
+        } else {
+          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty))) {
+            out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_WHITE_KING.move);
+          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty))) {
+            out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_WHITE_QUEEN.move);
+          }
+        }
+        break;
+      case 'p':
+        if (stopAtColor === 'w') shadowDirections = [0];
+        if (stopAtColor === 'b') shadowDirections = [4];
+        allShadows = this._computeShadows(squareKey, shadowDirections, '*');
+        nonTakingMoves = CMGBitBoard.binAnd(CMGPosition.PAWN_NON_TAKING_MOVES[squareKey], CMGBitBoard.binNot(allShadows));
+        out = CMGBitBoard.binOr(CMGPosition.PAWN_TAKING_MOVES[squareKey], nonTakingMoves);
+    }
+    return out;
+  };
+
+  CMGPosition.prototype._computeShadows = function(squareKey, directions, stopAtColor, stopAfterColor) {
+    var shadowMap;
+    if (stopAtColor == null) stopAtColor = '*';
+    if (stopAfterColor == null) stopAfterColor = false;
+    shadowMap = CMGBitBoard.EMPTY_BOARD;
+    if (stopAtColor) {
+      shadowMap = CMGBitBoard.binOr(shadowMap, this._computeSingleBehaviorShadows(squareKey, directions, stopAtColor, false));
+    }
+    if (stopAfterColor) {
+      shadowMap = CMGBitBoard.binOr(shadowMap, this._computeSingleBehaviorShadows(squareKey, directions, stopAfterColor, true));
+    }
+    return shadowMap;
+  };
+
+  CMGPosition.prototype._computeSingleBehaviorShadows = function(squareKey, directions, stoppingColor, stopAfterOnly) {
+    var direction, exclusionMap, piece, pieceSquare, pieceSquareBitBoard, pieces, shadowMap, squareKeyBitBoard, _i, _len;
+    if (stoppingColor == null) stoppingColor = '*';
+    if (stopAfterOnly == null) stopAfterOnly = false;
     shadowMap = CMGBitBoard.EMPTY_BOARD;
     pieces = null;
-    if (pieceColorFilter) {
-      pieces = this.piecesOfColor[pieceColorFilter];
-    } else {
+    if (stoppingColor === '*') {
       pieces = this.pieces;
+    } else {
+      pieces = this.piecesOfColor[stoppingColor];
     }
-    for (_i = 0, _len = pieces.length; _i < _len; _i++) {
-      piece = pieces[_i];
-      if (piece.square === squareKey) continue;
-      for (_j = 0, _len2 = directions.length; _j < _len2; _j++) {
-        direction = directions[_j];
-        if (CMGBitBoard.binAnd(CMGPosition._light(piece.square, direction), this._bitValueOfSquare(squareKey))) {
-          shadowMap = CMGBitBoard.binOr(shadowMap, CMGPosition._shadow(piece.square, direction));
+    squareKeyBitBoard = CMGBitBoard.valueOfSquare(squareKey);
+    for (pieceSquare in pieces) {
+      piece = pieces[pieceSquare];
+      if (pieceSquare === squareKey) continue;
+      pieceSquareBitBoard = CMGBitBoard.valueOfSquare(pieceSquare);
+      exclusionMap = false;
+      if (stopAfterOnly) exclusionMap = CMGBitBoard.binNot(pieceSquareBitBoard);
+      for (_i = 0, _len = directions.length; _i < _len; _i++) {
+        direction = directions[_i];
+        if (CMGBitBoard.binAnd(CMGPosition._light(pieceSquare, direction), squareKeyBitBoard)) {
+          shadowMap = CMGBitBoard.binOr(shadowMap, CMGPosition._shadow(pieceSquare, direction));
+          if (exclusionMap) {
+            shadowMap = CMGBitBoard.binAnd(shadowMap, exclusionMap);
+          }
           break;
         }
       }
@@ -516,11 +559,16 @@ CMGPosition = (function() {
     return shadowMap;
   };
 
-  CMGPosition.prototype._isValidMoveObject = function(move) {
-    var promotion;
-    promotion = false;
-    if (move.toPiece !== move.fromPiece) promotion = move.toPiece;
-    return this.isValidMove(move.fromSquare, move.toSquare, promotion);
+  CMGPosition.prototype._isValidMoveObject = function(pseudoMove) {
+    /*
+            Is the pseudo move a valid move:
+            * pawn taking moves where nothing can be taken (verify also en passant)
+            * move after which the king is under chess
+            * castling moves that cross a threatened square
+    */    if (pseudoMove.fromPiece.type === 'p' && (Math.abs(pseudoMove.toSquare - pseudoMove.fromSquare) % 8) !== 0 && pseudoMove.takenPiece === false) {
+      return false;
+    }
+    return true;
   };
 
   CMGPosition.prototype._piecesToBoardString = function() {
@@ -605,18 +653,12 @@ CMGPosition = (function() {
     _results = [];
     for (square in _ref) {
       _ref2 = _ref[square], color = _ref2.color, type = _ref2.type;
-      bvs = this._bitValueOfSquare(square);
+      bvs = CMGBitBoard.valueOfSquare(square);
       this.bitBoards.allPieces = CMGBitBoard.binOr(bvs, this.bitBoards.allPieces);
       this.bitBoards.allPiecesOfColor[color] = CMGBitBoard.binOr(bvs, this.bitBoards.allPiecesOfColor[color]);
       _results.push(this.bitBoards.allPiecesOfColorAndType[color][type] = CMGBitBoard.binOr(bvs, this.bitBoards.allPiecesOfColorAndType[color][type]));
     }
     return _results;
-  };
-
-  CMGPosition.prototype._bitValueOfSquare = function(square) {
-    var originValue;
-    originValue = [1, 0, 0, 0];
-    return CMGBitBoard.binLeftShift(originValue, square);
   };
 
   return CMGPosition;
