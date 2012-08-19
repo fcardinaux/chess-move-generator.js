@@ -593,7 +593,7 @@ CMGPosition = (function() {
             * move after which the king is under chess
             * castling moves that cross a threatened square
     */
-    var kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
+    var crossedSquare, crossedSquareAttackBitBoard, crossedSquareBitBoard, kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
     if (move.fromPiece.type === 'p' && (Math.abs(move.toSquare - move.fromSquare) % 8) !== 0 && move.takenPiece === false) {
       return false;
     }
@@ -602,6 +602,14 @@ CMGPosition = (function() {
     kingAttackBitBoard = CMGBitBoard.binAnd(kingBitBoard, pseudoThreatsOnPlayerAfterMove);
     if (!CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
       return false;
+    }
+    if (move.fromPiece === 'k' && Math.abs(move.toSquare - move.fromSquare) === 2) {
+      crossedSquare = move.fromSquare + (move.toSquare - move.fromSquare) / 2;
+      crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare);
+      crossedSquareAttackBitBoard = CMGBitBoard.binAnd(crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove);
+      if (!CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
+        return false;
+      }
     }
     return true;
   };

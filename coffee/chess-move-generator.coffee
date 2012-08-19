@@ -549,12 +549,19 @@ class CMGPosition
 
         pseudoThreatsOnPlayerAfterMove = move.newPosition._bitBoardOfPseudoMoves(@opponentColorCode(), @turn)
 
+        # Test if king is under attack
         kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[@turn]['k']
-
         kingAttackBitBoard = CMGBitBoard.binAnd( kingBitBoard, pseudoThreatsOnPlayerAfterMove )
-
         if not CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
             return false
+
+        # Test if castling crosses a square that is under attack
+        if move.fromPiece is 'k' and Math.abs(move.toSquare - move.fromSquare) is 2
+            crossedSquare = move.fromSquare + (move.toSquare - move.fromSquare) / 2
+            crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare)
+            crossedSquareAttackBitBoard = CMGBitBoard.binAnd( crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove )
+            if not CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
+                return false
 
         # promotion = false
         # if move.toPiece isnt move.fromPiece
