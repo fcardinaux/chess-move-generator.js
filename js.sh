@@ -12,6 +12,7 @@ yui_compressor=external/yuicompressor-2.4.6.jar
 # =============================================================================
 
 rm javascript/*.*
+rm test/*.js
 
 # =============================================================================
 
@@ -32,6 +33,7 @@ echo "Merging the bitboards at the end of the chess move generator..."
 cd ../javascript/
 awk 'FNR==1{print "/* "FILENAME" */"}1' bitboards.js >> chess-move-generator.js
 rm bitboards.js
+mv chess-move-generator.test.js ../test/
 
 # =============================================================================
 
