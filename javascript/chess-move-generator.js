@@ -15,6 +15,14 @@ CMGBitBoard = (function() {
 
   CMGBitBoard.FULL_BOARD = [0xffff, 0xffff, 0xffff, 0xffff];
 
+  CMGBitBoard.binEqual = function(bb1, bb2) {
+    var quadrantId;
+    for (quadrantId = 0; quadrantId <= 3; quadrantId++) {
+      if (bb1[quadrantId] !== bb2[quadrantId]) return false;
+    }
+    return true;
+  };
+
   CMGBitBoard.binAnd = function(bb1, bb2) {
     return [bb1[0] & bb2[0], bb1[1] & bb2[1], bb1[2] & bb2[2], bb1[3] & bb2[3]];
   };
@@ -33,6 +41,7 @@ CMGBitBoard = (function() {
 
   CMGBitBoard.valueOfSquare = function(square) {
     var originValue;
+    if (typeof square === 'string') square = parseInt(square);
     originValue = [1, 0, 0, 0];
     return CMGBitBoard.binLeftShift(originValue, square);
   };
@@ -40,11 +49,18 @@ CMGBitBoard = (function() {
   CMGBitBoard.binLeftShift = function(bb, n) {
     var carry, qKey, res, shiftedBb;
     res = [];
+    while (n >= 16) {
+      bb[3] = bb[2];
+      bb[2] = bb[1];
+      bb[1] = bb[0];
+      bb[0] = 0;
+      n -= 16;
+    }
     carry = 0;
     for (qKey = 0; qKey <= 3; qKey++) {
       shiftedBb = (bb[qKey] << n) + carry;
-      res[qKey] = shiftedBb & 0xff;
-      carry = shiftedBb >> 8;
+      res[qKey] = shiftedBb & 0xffff;
+      carry = shiftedBb >> 16;
     }
     return res;
   };
@@ -464,6 +480,19 @@ CMGPosition = (function() {
     */    return 'todo';
   };
 
+  CMGPosition.prototype._bitBoardOfPseudoMoves = function(stopAtColor, stopAfterColor) {
+    var out, piece, pieceSquare, _ref;
+    if (stopAtColor == null) stopAtColor = false;
+    if (stopAfterColor == null) stopAfterColor = false;
+    out = CMGBitBoard.EMPTY_BOARD;
+    _ref = this.piecesOfColor[this.turn];
+    for (pieceSquare in _ref) {
+      piece = _ref[pieceSquare];
+      out = CMGBitBoard.binOr(out, this._bitBoardOfPseudoMovesFromSquare(pieceSquare, piece, stopAtColor, stopAfterColor));
+    }
+    return out;
+  };
+
   CMGPosition.prototype._bitBoardOfPseudoMovesFromSquare = function(squareKey, movedPiece, stopAtColor, stopAfterColor) {
     var allShadows, nonTakingMoves, out, shadowDirections, shadows;
     if (stopAtColor == null) stopAtColor = false;
@@ -559,13 +588,21 @@ CMGPosition = (function() {
     return shadowMap;
   };
 
-  CMGPosition.prototype._isValidMoveObject = function(pseudoMove) {
+  CMGPosition.prototype._isValidMoveObject = function(move) {
     /*
             Is the pseudo move a valid move:
             * pawn taking moves where nothing can be taken (verify also en passant)
             * move after which the king is under chess
             * castling moves that cross a threatened square
-    */    if (pseudoMove.fromPiece.type === 'p' && (Math.abs(pseudoMove.toSquare - pseudoMove.fromSquare) % 8) !== 0 && pseudoMove.takenPiece === false) {
+    */
+    var kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
+    if (move.fromPiece.type === 'p' && (Math.abs(move.toSquare - move.fromSquare) % 8) !== 0 && move.takenPiece === false) {
+      return false;
+    }
+    pseudoThreatsOnPlayerAfterMove = move.newPosition._bitBoardOfPseudoMoves(this.opponentColorCode(), this.turn);
+    kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[this.turn]['k'];
+    kingAttackBitBoard = CMGBitBoard.binAnd(kingBitBoard, pseudoThreatsOnPlayerAfterMove);
+    if (!CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
       return false;
     }
     return true;
@@ -748,6 +785,7 @@ CMGPiece = (function() {
 })();
 
 module.exports = {
+  bitBoard: CMGBitBoard,
   position: CMGPosition,
   move: CMGMove
 };

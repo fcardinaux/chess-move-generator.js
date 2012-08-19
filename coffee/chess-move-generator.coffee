@@ -16,6 +16,12 @@ class CMGBitBoard
     # -------------------------------------------------------------------------
     # Bitboard maths (functions of class and of instance)
 
+    @binEqual: (bb1, bb2) ->
+        for quadrantId in [0..3]
+            if bb1[quadrantId] isnt bb2[quadrantId]
+                return false
+        return true
+
     @binAnd: (bb1, bb2) ->
         [
             bb1[0] & bb2[0],
@@ -49,16 +55,28 @@ class CMGBitBoard
         ]
 
     @valueOfSquare: (square) ->
+        if typeof square is 'string'
+            square = parseInt square
         originValue = [1, 0, 0, 0] # quadrants
         CMGBitBoard.binLeftShift(originValue, square)
 
     @binLeftShift: (bb, n) ->
         res = []
+
+        # Left shift (<< n) is limited to n < 32, so eliminate lost quadrants first
+        while n >= 16
+            # bb[3] is lost
+            bb[3] = bb[2]
+            bb[2] = bb[1]
+            bb[1] = bb[0]
+            bb[0] = 0
+            n -= 16
+
         carry = 0
         for qKey in [0..3]
             shiftedBb = (bb[qKey] << n) + carry
-            res[qKey] = shiftedBb & 0xff
-            carry = shiftedBb >> 8
+            res[qKey] = shiftedBb & 0xffff
+            carry = shiftedBb >> 16
         return res
 
     @bitBoardToSquareKeyArray: ( bitBoard ) ->
@@ -424,6 +442,13 @@ class CMGPosition
     # -------------------------------------------------------------------------
     # Private functions of object (comparable to non static methods)
 
+    _bitBoardOfPseudoMoves: (stopAtColor = false, stopAfterColor = false) ->
+        out = CMGBitBoard.EMPTY_BOARD
+        for pieceSquare, piece of @piecesOfColor[@turn]
+            out = CMGBitBoard.binOr( out, @_bitBoardOfPseudoMovesFromSquare(pieceSquare, piece, stopAtColor, stopAfterColor) )
+
+        return out
+
     _bitBoardOfPseudoMovesFromSquare: (squareKey, movedPiece, stopAtColor = false, stopAfterColor = false) ->
         out = CMGBitBoard.EMPTY_BOARD
 
@@ -508,7 +533,7 @@ class CMGPosition
                     break # correct direction found, break 1 level
         return shadowMap
 
-    _isValidMoveObject: (pseudoMove) ->
+    _isValidMoveObject: (move) ->
         ###
         Is the pseudo move a valid move:
         * pawn taking moves where nothing can be taken (verify also en passant)
@@ -516,13 +541,22 @@ class CMGPosition
         * castling moves that cross a threatened square
         ###
 
-        if pseudoMove.fromPiece.type is 'p' and ( Math.abs(pseudoMove.toSquare - pseudoMove.fromSquare) % 8 ) isnt 0 and pseudoMove.takenPiece is false
+        if move.fromPiece.type is 'p' and ( Math.abs(move.toSquare - move.fromSquare) % 8 ) isnt 0 and move.takenPiece is false
             # A taking move with a pawn, but no piece has been taken
             return false
 
+        pseudoThreatsOnPlayerAfterMove = move.newPosition._bitBoardOfPseudoMoves(@opponentColorCode(), @turn)
+
+        kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[@turn]['k']
+
+        kingAttackBitBoard = CMGBitBoard.binAnd( kingBitBoard, pseudoThreatsOnPlayerAfterMove )
+
+        if not CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
+            return false
+
         # promotion = false
-        # if pseudoMove.toPiece isnt pseudoMove.fromPiece
-        #     promotion = pseudoMove.toPiece
+        # if move.toPiece isnt move.fromPiece
+        #     promotion = move.toPiece
         # @isValidMove(move.fromSquare, move.toSquare, promotion)
 
         return true
@@ -680,5 +714,6 @@ class CMGPiece
 # =============================================================================
 
 module.exports =
+    bitBoard: CMGBitBoard
     position: CMGPosition
     move: CMGMove

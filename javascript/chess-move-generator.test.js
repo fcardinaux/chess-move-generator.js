@@ -7,11 +7,13 @@ Licence: see README.md
 
 About Expresso: http://visionmedia.github.com/expresso/
 */
-var chessMoveGenerator, compareArrays, positionClass;
+var bitBoardClass, chessMoveGenerator, compareArrays, positionClass;
 
 chessMoveGenerator = require('./chess-move-generator');
 
 positionClass = chessMoveGenerator.position;
+
+bitBoardClass = chessMoveGenerator.bitBoard;
 
 compareArrays = function(arr1, arr2) {
   var elem1, elem2, lookup1, lookup2, missingInArr1, missingInArr2, _i, _j, _k, _len, _len2, _len3;
@@ -36,6 +38,18 @@ compareArrays = function(arr1, arr2) {
 };
 
 module.exports = {
+  'test CMGBitBoard#valueOfSquare': function(beforeExit, assert) {
+    assert.eql([0x0, 0x8000, 0x0, 0x0], bitBoardClass.valueOfSquare(31));
+    assert.eql([0x1, 0x0, 0x0, 0x0], bitBoardClass.valueOfSquare(0));
+    assert.eql([0x80, 0x0, 0x0, 0x0], bitBoardClass.valueOfSquare(7));
+    assert.eql([0x100, 0x0, 0x0, 0x0], bitBoardClass.valueOfSquare(8));
+    assert.eql([0x8000, 0x0, 0x0, 0x0], bitBoardClass.valueOfSquare(15));
+    assert.eql([0x0, 0x1, 0x0, 0x0], bitBoardClass.valueOfSquare(16));
+    assert.eql([0x0, 0x80, 0x0, 0x0], bitBoardClass.valueOfSquare(23));
+    assert.eql([0x0, 0x100, 0x0, 0x0], bitBoardClass.valueOfSquare(24));
+    assert.eql([0x0, 0x0, 0x1, 0x0], bitBoardClass.valueOfSquare(32));
+    return assert.eql([0x0, 0x0, 0x0, 0x8000], bitBoardClass.valueOfSquare(63));
+  },
   'test CMGPosition#fromString': function(beforeExit, assert) {
     var newPositionString, posObj, positionString, positionStrings, _i, _len, _results;
     positionStrings = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0", "8/2p5/K2p4/1P5r/1R3p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/1P5r/KR3p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/R4p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/2R2p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/3R1p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/4Rp1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5R1k/8/4P1P1/8 b - - 0 0", "8/2p5/3p4/KP5r/5p1k/1R6/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5p1k/8/1R2P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5p1k/8/4P1P1/1R6 b - - 1 0", "8/2p5/3p4/KP5r/1R3p1k/4P3/6P1/8 b - - 0 0", "8/2p5/3p4/KP5r/1R2Pp1k/8/6P1/8 b - e3 0 0", "8/2p5/3p4/KP5r/1R3p1k/6P1/4P3/8 b - - 0 0", "8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 0"];

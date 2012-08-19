@@ -10,6 +10,7 @@ About Expresso: http://visionmedia.github.com/expresso/
 
 chessMoveGenerator = require('./chess-move-generator')
 positionClass = chessMoveGenerator.position
+bitBoardClass = chessMoveGenerator.bitBoard
 
 compareArrays = (arr1, arr2) ->
     # Inpired by http://stackoverflow.com/a/3432978
@@ -33,6 +34,19 @@ compareArrays = (arr1, arr2) ->
     return [missingInArr1, missingInArr2]
 
 module.exports =
+    'test CMGBitBoard#valueOfSquare': (beforeExit, assert) ->
+        assert.eql([   0x0, 0x8000,    0x0,    0x0], bitBoardClass.valueOfSquare(31))
+
+        assert.eql([   0x1,    0x0,    0x0,    0x0], bitBoardClass.valueOfSquare(0))
+        assert.eql([  0x80,    0x0,    0x0,    0x0], bitBoardClass.valueOfSquare(7))
+        assert.eql([ 0x100,    0x0,    0x0,    0x0], bitBoardClass.valueOfSquare(8))
+        assert.eql([0x8000,    0x0,    0x0,    0x0], bitBoardClass.valueOfSquare(15))
+        assert.eql([   0x0,    0x1,    0x0,    0x0], bitBoardClass.valueOfSquare(16))
+        assert.eql([   0x0,   0x80,    0x0,    0x0], bitBoardClass.valueOfSquare(23))
+        assert.eql([   0x0,  0x100,    0x0,    0x0], bitBoardClass.valueOfSquare(24))
+        assert.eql([   0x0,    0x0,    0x1,    0x0], bitBoardClass.valueOfSquare(32))
+        assert.eql([   0x0,    0x0,    0x0, 0x8000], bitBoardClass.valueOfSquare(63))
+
     'test CMGPosition#fromString': (beforeExit, assert) ->
         positionStrings = [
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
