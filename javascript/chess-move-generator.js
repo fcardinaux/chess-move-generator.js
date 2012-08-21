@@ -426,7 +426,24 @@ CMGPosition = (function() {
       toPiece = piece;
       takenPiece = this._getPieceOnSquare(target);
       takenOnSquare = false;
-      if (takenPiece) takenOnSquare = target;
+      if (takenPiece) {
+        takenOnSquare = target;
+      } else if (piece.type === 'p' && parseInt(target) === this.enPassantSquare) {
+        switch (this.enPassantSquare - parseInt(squareKey)) {
+          case -9:
+            takenOnSquare = squareKey - 1;
+            break;
+          case -7:
+            takenOnSquare = squareKey + 1;
+            break;
+          case 7:
+            takenOnSquare = squareKey - 1;
+            break;
+          case 9:
+            takenOnSquare = squareKey + 1;
+        }
+        if (takenOnSquare) takenPiece = this._getPieceOnSquare(takenOnSquare);
+      }
       if (piece.type === 'p' && (target >= CMGPosition.TOP_LEFT_CORNER || target <= CMGPosition.BOTTOM_RIGHT_CORNER)) {
         _ref = ['q', 'r', 'n', 'b'];
         for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {

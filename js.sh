@@ -65,4 +65,8 @@ esac
 echo "Running unit tests..."
 
 cd ..
+T="$(date +%s)"
 node_modules/expresso/bin/expresso test/chess-move-generator.test.js
+# http://stackoverflow.com/a/3684051
+T="$(($(date +%s)-T))"
+printf "Elapsed time: %02d:%02d:%02d:%02d\n" "$((T/86400))" "$((T/3600%24))" "$((T/60%60))" "$((T%60))"

@@ -376,10 +376,21 @@ class CMGPosition
         targets = CMGBitBoard.bitBoardToSquareKeyArray( pseudoMoveBitBoard )
         for target in targets
             toPiece = piece
+
             takenPiece = @_getPieceOnSquare(target)
             takenOnSquare = false
             if takenPiece
                 takenOnSquare = target
+            else if piece.type is 'p' and parseInt(target) is @enPassantSquare
+                # Still need to verify if taken 'en passant':
+                switch @enPassantSquare - parseInt(squareKey)
+                    when -9 then takenOnSquare = squareKey - 1
+                    when -7 then takenOnSquare = squareKey + 1
+                    when  7 then takenOnSquare = squareKey - 1
+                    when  9 then takenOnSquare = squareKey + 1
+                if takenOnSquare
+                    takenPiece = @_getPieceOnSquare(takenOnSquare)
+
             if piece.type is 'p' and (target >= CMGPosition.TOP_LEFT_CORNER or target <= CMGPosition.BOTTOM_RIGHT_CORNER)
                 # A promotion
                 for newPieceType in ['q', 'r', 'n', 'b']
