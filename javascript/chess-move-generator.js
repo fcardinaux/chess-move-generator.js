@@ -501,6 +501,27 @@ CMGPosition = (function() {
       case 077:
         allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_KING;
     }
+    if (move.takenOnSquare !== false && move.takenPiece.type === 'r') {
+      switch (parseInt(move.takenOnSquare)) {
+        case 0:
+          allowedCastling &= ~CMGPosition.CASTLING_CODE_WHITE_QUEEN;
+          break;
+        case 4:
+          allowedCastling &= ~CMGPosition.CASTLING_CODE_WHITE_QUEEN & ~CMGPosition.CASTLING_CODE_WHITE_KING;
+          break;
+        case 7:
+          allowedCastling &= ~CMGPosition.CASTLING_CODE_WHITE_KING;
+          break;
+        case 070:
+          allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_QUEEN;
+          break;
+        case 074:
+          allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~CMGPosition.CASTLING_CODE_BLACK_KING;
+          break;
+        case 077:
+          allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_KING;
+      }
+    }
     enPassantSquare = false;
     if (move.fromPiece.type === 'p') {
       pawnJump = move.toSquare - move.fromSquare;

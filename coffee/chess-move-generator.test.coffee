@@ -13,10 +13,10 @@ positionClass = chessMoveGenerator.position
 bitBoardClass = chessMoveGenerator.bitBoard
 
 # Set the performance test depth here
-DEPTH = 1
+DEPTH = 2
 
 LOG = (x) ->
-    # console.log(x)
+    console.log(x)
 
 # http://stackoverflow.com/a/498995
 trimString = (str) ->
@@ -143,6 +143,39 @@ module.nonexports =
 module.exports =
     'test CMGPosition#allPossibleMoves': (beforeExit, assert) ->
         testData = [
+            [
+                "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+                [
+                    # King moves
+                    "r3k2r/8/8/8/8/8/8/R4K1R b kq - 1 1",
+                    "r3k2r/8/8/8/8/8/8/R2K3R b kq - 1 1",
+                    "r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1",
+                    "r3k2r/8/8/8/8/8/8/2KR3R b kq - 1 1",
+                    "r3k2r/8/8/8/8/8/3K4/R6R b kq - 1 1",
+                    "r3k2r/8/8/8/8/8/4K3/R6R b kq - 1 1",
+                    "r3k2r/8/8/8/8/8/5K2/R6R b kq - 1 1",
+                    # Rook moves
+                    "r3k2r/8/8/8/8/8/8/1R2K2R b Kkq - 1 1",
+                    "r3k2r/8/8/8/8/8/8/2R1K2R b Kkq - 1 1",
+                    "r3k2r/8/8/8/8/8/8/3RK2R b Kkq - 1 1",
+                    "r3k2r/8/8/8/8/8/R7/4K2R b Kkq - 1 1",
+                    "r3k2r/8/8/8/8/R7/8/4K2R b Kkq - 1 1",
+                    "r3k2r/8/8/8/R7/8/8/4K2R b Kkq - 1 1",
+                    "r3k2r/8/8/R7/8/8/8/4K2R b Kkq - 1 1",
+                    "r3k2r/8/R7/8/8/8/8/4K2R b Kkq - 1 1",
+                    "r3k2r/R7/8/8/8/8/8/4K2R b Kkq - 1 1",
+                    "R3k2r/8/8/8/8/8/8/4K2R b Kk - 0 1",
+                    "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1",
+                    "r3k2r/8/8/8/8/8/8/R3KR2 b Qkq - 1 1"
+                    "r3k2r/8/8/8/8/8/7R/R3K3 b Qkq - 1 1",
+                    "r3k2r/8/8/8/8/7R/8/R3K3 b Qkq - 1 1",
+                    "r3k2r/8/8/8/7R/8/8/R3K3 b Qkq - 1 1",
+                    "r3k2r/8/8/7R/8/8/8/R3K3 b Qkq - 1 1",
+                    "r3k2r/8/7R/8/8/8/8/R3K3 b Qkq - 1 1",
+                    "r3k2r/7R/8/8/8/8/8/R3K3 b Qkq - 1 1",
+                    "r3k2R/8/8/8/8/8/8/R3K3 b Qq - 0 1"
+                ]
+            ],
             [
                 "4k2R/8/8/8/8/8/8/4K3 b - - 1 1",
                 [
@@ -318,6 +351,48 @@ module.exports =
 
             assert.eql([[], []], result)
 
+    'test division': (beforeExit, assert) ->
+
+        # todo exec = require('child_process').exec
+        # todo fct = (error, stdout, stderr) ->
+        # todo     console.log(stdout)
+        # todo exec('ls', fct)
+
+        testData = [
+            [
+                "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+                2,
+                [
+                    {"e1g1", 23},
+                    {"e1c1", 23},
+                    {"e1f1", 26},
+                    {"e1d1", 26},
+                    {"e1e2", 26},
+                    {"e1f2", 26},
+                    {"e1d2", 26},
+                    {"a1b1", 26},
+                    {"a1c1", 25},
+                    {"a1d1", 23},
+                    {"a1a2", 25},
+                    {"a1a3", 24},
+                    {"a1a4", 23},
+                    {"a1a5", 22},
+                    {"a1a6", 21},
+                    {"a1a7", 17},
+                    {"a1a8", 3},
+                    {"h1g1", 25},
+                    {"h1f1", 23},
+                    {"h1h2", 25},
+                    {"h1h3", 24},
+                    {"h1h4", 23},
+                    {"h1h5", 22},
+                    {"h1h6", 21},
+                    {"h1h7", 17},
+                    {"h1h8", 3},
+                ]
+            ]
+        ]
+
     'test perftsuite.txt': (beforeExit, assert) ->
         fs = require('fs');
 
@@ -331,7 +406,7 @@ module.exports =
                 return true
 
             for move in moves
-                testDepth(move.newPosition, counters, currentDepth + 1, maxDepth)
+                testDepth(move.newPosition, counters, currentDepth, maxDepth)
 
             return true
 
@@ -353,10 +428,8 @@ module.exports =
 
             # Initialize the counters
             counters = []
-            iDepth = 0
-            while iDepth < maxDepth
+            for iDepth in [0..(maxDepth-1)]
                 counters.push(0)
-                iDepth++
 
             # Count
             testDepth(positionObj, counters, 0, maxDepth)

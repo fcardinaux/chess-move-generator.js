@@ -325,7 +325,6 @@ class CMGPosition
         @bitBoards = {}
         @_generateBitBoards()
 
-
     # -------------------------------------------------------------------------
     # Public functions of object (comparable to non static methods)
 
@@ -441,6 +440,15 @@ class CMGPosition
             when 070 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN )
             when 074 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~ CMGPosition.CASTLING_CODE_BLACK_KING )
             when 077 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_KING )
+
+        if move.takenOnSquare isnt false and move.takenPiece.type is 'r'
+            switch parseInt(move.takenOnSquare)
+                when   0 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN )
+                when   4 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN & ~ CMGPosition.CASTLING_CODE_WHITE_KING )
+                when   7 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_KING )
+                when 070 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN )
+                when 074 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~ CMGPosition.CASTLING_CODE_BLACK_KING )
+                when 077 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_KING )
 
         enPassantSquare = false
         if move.fromPiece.type is 'p'
