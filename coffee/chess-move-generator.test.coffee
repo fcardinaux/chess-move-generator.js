@@ -13,7 +13,7 @@ positionClass = chessMoveGenerator.position
 bitBoardClass = chessMoveGenerator.bitBoard
 
 # Set the performance test depth here
-DEPTH = 2
+DEPTH = 3
 
 LOG = (x) ->
     # console.log(x)

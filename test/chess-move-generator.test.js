@@ -15,7 +15,7 @@ positionClass = chessMoveGenerator.position;
 
 bitBoardClass = chessMoveGenerator.bitBoard;
 
-DEPTH = 2;
+DEPTH = 3;
 
 LOG = function(x) {};
 
