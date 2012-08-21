@@ -65,4 +65,4 @@ esac
 echo "Running unit tests..."
 
 cd ..
-node_modules/expresso/bin/expresso javascript/chess-move-generator.test.js
+node_modules/expresso/bin/expresso test/chess-move-generator.test.js

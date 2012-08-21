@@ -34,7 +34,7 @@ The board and the square codes (note that we don't use the 0x88 representation h
    7|  48 |  49 |  50 |  51 |  52 |  53 |  54 |  55 |
     |  60 |  61 |  62 |  63 |  64 |  65 |  66 |  67 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
-   6|  80 |  81 |  82 |  83 |  84 |  85 |  86 |  87 |
+   6|  40 |  41 |  42 |  43 |  44 |  45 |  46 |  47 |
     |  50 |  51 |  52 |  53 |  54 |  55 |  56 |  57 |
     +-----+-----+-----+-----+-----+-----+-----+-----+
    5|  32 |  33 |  34 |  35 |  36 |  37 |  38 |  39 |
@@ -83,6 +83,10 @@ Numbering of each bitboard quadrant (hexadecimal here):
    1| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
     +---+---+---+---+---+---+---+---+
       A   B   C   D   E   F   G   H
+
+"Keys [of objects] can only be strings, and numeric keys such as those used in Arrays are coerced and stored as strings"
+(http://stackoverflow.com/a/6066954)
+
 
 
 Todos
@@ -194,59 +198,117 @@ kingBitBoardStringArray = [
     '000000000000000'
 ]
 
-pawnMoveBitBoardStringArray = [
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000010000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000'
-]
+pawnMoveBitBoardStringArray = {
+    b: [
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000010000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000'
+    ],
+    w: [
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000010000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000'
+    ]
+}
 
-pawnStartingMoveBitBoardStringArray = [
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000010000000',
-    '000000010000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000'
-]
+pawnStartingMoveBitBoardStringArray = {
+    b: [
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000010000000',
+        '000000010000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000'
+    ],
+    w: [
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000010000000',
+        '000000010000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000'
+    ]
+}
 
-pawnTakeBitBoardStringArray = [
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000101000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000',
-    '000000000000000'
-]
+
+pawnTakeBitBoardStringArray = {
+    b: [
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000101000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000'
+    ],
+    w: [
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000101000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000',
+        '000000000000000'
+    ]
+}
 
 # =============================================================================
 # Eight different shadows
@@ -520,37 +582,29 @@ loadMoves = (bitBoardStringArray, traceSquare = false) ->
     return out
 
 loadPawnNonTakingMoves = (color) ->
-    if color is 'w'
-        arrayOp = (arr) -> arr
-    else
-        arrayOp = (arr) -> arr.reverse()
 
-    ordinaryMoveArr = arrayOp(pawnMoveBitBoardStringArray)
+    ordinaryMoveArr = pawnMoveBitBoardStringArray[color]
     if color is 'b'
-        row2MoveArr = arrayOp(pawnMoveBitBoardStringArray)
-        row7MoveArr = arrayOp(pawnStartingMoveBitBoardStringArray)
+        row2MoveArr = pawnMoveBitBoardStringArray[color]
+        row7MoveArr = pawnStartingMoveBitBoardStringArray[color]
     else
-        row2MoveArr = arrayOp(pawnStartingMoveBitBoardStringArray)
-        row7MoveArr = arrayOp(pawnMoveBitBoardStringArray)
+        row2MoveArr = pawnStartingMoveBitBoardStringArray[color]
+        row7MoveArr = pawnMoveBitBoardStringArray[color]
 
     out = []
 
     for iRow in [6..1]      # 2 .. 7
         for iCol in [7..0]  # A .. H
             switch iRow
-                when 6 then out.push(bitBoardStringArrayToIntegers( row2MoveArr, iRow, iCol ))
-                when 1 then out.push(bitBoardStringArrayToIntegers( row7MoveArr, iRow, iCol ))
+                when 6 then out.push(bitBoardStringArrayToIntegers( row2MoveArr,     iRow, iCol ))
+                when 1 then out.push(bitBoardStringArrayToIntegers( row7MoveArr,     iRow, iCol ))
                 else        out.push(bitBoardStringArrayToIntegers( ordinaryMoveArr, iRow, iCol ))
 
     return out
 
 loadPawnTakingMoves = (color) ->
-    if color is 'w'
-        arrayOp = (arr) -> arr
-    else
-        arrayOp = (arr) -> arr.reverse()
 
-    takingMoveArr = arrayOp(pawnTakeBitBoardStringArray)
+    takingMoveArr = pawnTakeBitBoardStringArray[color]
 
     out = []
 

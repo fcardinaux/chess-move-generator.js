@@ -6,6 +6,44 @@ Chess Move Generator
 Licence: see README.md
 ###
 
+class clg
+    @opened: false
+
+    @open: (val = true) ->
+        @opened = val
+
+    @close: () ->
+        @opened = false
+
+    @log: (x, isBitBoard = false) ->
+        if not @opened
+            return
+        if isBitBoard
+            @_logBitBoard(x)
+        else
+            console.log(x)
+
+    @_logBitBoard: (bb) ->
+        ###
+        For debugging
+        ###
+        console.log(JSON.stringify(bb) + ':')
+        console.log('+--------+')
+        val = ['.', 'x']
+        for quadrantKey in [3..0]
+            quadrant = bb[quadrantKey]
+            lines = []
+            lines[0] = Math.floor(quadrant / 256)
+            lines[1] = quadrant % 256
+            for line in lines
+                text = ''
+                for bit in [0..7]
+                    text += val[line % 2]
+                    line = Math.floor( line / 2 )
+                console.log('|' + text + '|')
+        console.log('+--------+')
+
+
 # =============================================================================
 
 class CMGBitBoard
@@ -24,6 +62,9 @@ class CMGBitBoard
             if bb1[quadrantId] isnt bb2[quadrantId]
                 return false
         return true
+
+    @isZero: (bb) ->
+        @binEqual(bb, @EMPTY_BOARD)
 
     @binAnd: (bb1, bb2) ->
         [
@@ -51,15 +92,13 @@ class CMGBitBoard
 
     @binNot: (bb) ->
         [
-            ~ bb[0],
-            ~ bb[1],
-            ~ bb[2],
-            ~ bb[3]
+            ~ bb[0] & 0xffff,
+            ~ bb[1] & 0xffff,
+            ~ bb[2] & 0xffff,
+            ~ bb[3] & 0xffff
         ]
 
     @valueOfSquare: (square) ->
-        if typeof square is 'string'
-            square = parseInt square
         @SQUARE_VALUES[square]
 
     @binLeftShift: (bb, n) ->
@@ -89,10 +128,13 @@ class CMGBitBoard
                     squareKeys.push(qid * 16 + key)
         return squareKeys
 
-
 # =============================================================================
 
 class CMGPosition
+    # -------------------------------------------------------------------------
+    # Only for tests:
+    @PSEUDO_ONLY = false
+
     # -------------------------------------------------------------------------
     # Noticeable values:
     @ROW_SPAN:              8
@@ -151,19 +193,6 @@ class CMGPosition
 
     # -------------------------------------------------------------------------
     # Private functions of class (comparable to static methods)
-
-    # Function to clone an object (http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone)
-    # @todo Move this function to an external library
-    @_clone: (obj) ->
-        if obj is null or typeof(obj) isnt 'object'
-            return obj
-
-        out = new obj.constructor()
-
-        for key, value of obj
-            out[key] = @_clone(value)
-
-        out
 
     @_boardStringToPieces: (boardString) ->
         # Reverse, so that the table SquareTabId is immediately ordered by square ID
@@ -285,15 +314,16 @@ class CMGPosition
         @param moveNumber (integer)
         ###
 
-        @bitBoards = {}
-        @_generateBitBoards()
-
-        # Load pieces of color
         @piecesOfColor = {b: {}, w: {}}
+
         if @pieces
-            # This test is necessary, because if _clone() is used, the object is first created empty
+            # This test is necessary, because if CMGUtil.cloneObject() is used, the object is first created empty
+
             for squareId, piece of @pieces
                 @piecesOfColor[piece.color][squareId] = piece
+
+        @bitBoards = {}
+        @_generateBitBoards()
 
 
     # -------------------------------------------------------------------------
@@ -324,6 +354,7 @@ class CMGPosition
         true
 
     allPossibleMovesFromSquare: (squareKey) ->
+        squareKey = CMGUtil.toString(squareKey)
 
         piece = @_getPieceOnSquare(squareKey)
         if not piece
@@ -333,24 +364,32 @@ class CMGPosition
             return 0x0
 
         # First, seach all "ordinary" pseudo moves
-        pseudoMoveBitboard = @_bitBoardOfPseudoMovesFromSquare(squareKey, piece, @turn)
+        pseudoMoveBitBoard = @_bitBoardOfPseudoMovesFromSquare(squareKey, piece, @turn, @opponentColorCode())
 
         # Second, convert the move bitboard into a move array, and execute promotion if required
         pseudoMoves = []
-        targets = CMGBitBoard.bitBoardToSquareKeyArray( pseudoMoveBitboard )
+        targets = CMGBitBoard.bitBoardToSquareKeyArray( pseudoMoveBitBoard )
         for target in targets
             toPiece = piece
             takenPiece = @_getPieceOnSquare(target)
+            takenOnSquare = false
             if takenPiece
                 takenOnSquare = target
             if piece.type is 'p' and (target >= CMGPosition.TOP_LEFT_CORNER or target <= CMGPosition.BOTTOM_RIGHT_CORNER)
                 # A promotion
                 for newPieceType in ['q', 'r', 'n', 'b']
-                    move = new CMGMove(squareKey, piece, target, newPieceType, null, false, takenPiece, takenOnSquare)
+                    newPiece = new CMGPiece(piece.color, newPieceType)
+                    move = new CMGMove(squareKey, piece, target, newPiece, null, false, takenPiece, takenOnSquare)
                     move.setNewPositionObject( @_getNewPositionObjectAfterMove(move) )
                     pseudoMoves.push(move)
             else
-                move = new CMGMove(squareKey, piece, target, toPiece, null, false, takenPiece, takenOnSquare)
+                castling = false
+                if piece.type is 'k' and Math.abs(target - squareKey) is 2
+                    if target > squareKey
+                        castling = 'k'
+                    else
+                        castling = 'q'
+                move = new CMGMove(squareKey, piece, target, toPiece, null, castling, takenPiece, takenOnSquare)
                 move.setNewPositionObject( @_getNewPositionObjectAfterMove(move) )
                 pseudoMoves.push(move)
 
@@ -364,7 +403,7 @@ class CMGPosition
         return out
 
     _getNewPositionObjectAfterMove: (move) ->
-        pieces = CMGPosition._clone( @pieces )
+        pieces = CMGUtil.cloneObject( @pieces )
 
         pieces[move.fromSquare] = null # ensure garbage collection
         delete pieces[move.fromSquare] # remove the element from the object
@@ -385,17 +424,17 @@ class CMGPosition
                 delete pieces[7]
         else if move.castling is 'q'
             if @turn is 'b'
-                pieces[072] = pieces[070]
+                pieces[073] = pieces[070]
                 delete pieces[070]
             if @turn is 'w'
-                pieces[2] = pieces[0]
+                pieces[3] = pieces[0]
                 delete pieces[0]
 
         turn = @opponentColorCode()
 
         # Determine new 'allowed castling' value
         allowedCastling = @allowedCastling
-        switch move.fromSquare
+        switch parseInt(move.fromSquare)
             when   0 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN )
             when   4 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN & ~ CMGPosition.CASTLING_CODE_WHITE_KING )
             when   7 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_KING )
@@ -403,15 +442,28 @@ class CMGPosition
             when 074 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~ CMGPosition.CASTLING_CODE_BLACK_KING )
             when 077 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_KING )
 
-        enPassantSquare = false # todo
+        enPassantSquare = false
+        if move.fromPiece.type is 'p'
+            pawnJump = move.toSquare - move.fromSquare
+            if Math.abs( pawnJump ) is 16
+                enPassantSquare = move.toSquare - pawnJump / 2
 
         halfMoveClock   = @halfMoveClock
         moveNumber      = @moveNumber
-        if moveNumber > 0
+        if moveNumber is 0
+            # Without counters
+            halfMoveClock = 0
+        else
             # With counters
-            halfMoveClock += 1
             if turn is 'w'
                 moveNumber += 1
+
+            if move.fromPiece.type is 'p'
+                halfMoveClock = 0
+            else if move.takenPiece
+                halfMoveClock = 0
+            else
+                halfMoveClock += 1
 
         new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber)
 
@@ -446,6 +498,7 @@ class CMGPosition
 
     _bitBoardOfPseudoMoves: (stopAtColor = false, stopAfterColor = false) ->
         out = CMGBitBoard.EMPTY_BOARD
+
         for pieceSquare, piece of @piecesOfColor[@turn]
             out = CMGBitBoard.binOr( out, @_bitBoardOfPseudoMovesFromSquare(pieceSquare, piece, stopAtColor, stopAfterColor) )
 
@@ -462,7 +515,7 @@ class CMGPosition
                 shadows = @_computeShadows(squareKey, [0, 2, 4, 6], stopAtColor, stopAfterColor)
                 out = CMGBitBoard.binAnd( CMGPosition.ROOK_MOVES[squareKey], CMGBitBoard.binNot(shadows) )
             when 'n'
-                out = CMGBitBoard.binAnd( CMGPosition.KNIGHT_MOVES[squareKey], CMGBitBoard.binNot(@bitBoards.allPiecesOfColor[@turn]) )
+                out = CMGBitBoard.binAnd( CMGPosition.KNIGHT_MOVES[squareKey], CMGBitBoard.binNot( @bitBoards.allPiecesOfColor[@turn]) )
             when 'b'
                 shadows = @_computeShadows(squareKey, [1, 3, 5, 7], stopAtColor, stopAfterColor)
                 out = CMGBitBoard.binAnd( CMGPosition.BISHOP_MOVES[squareKey], CMGBitBoard.binNot(shadows) )
@@ -475,22 +528,26 @@ class CMGPosition
 
                 # Castling move if any
                 if movedPiece.color is 'b'
-                    if      (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING)  and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING)  and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty ) )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_BLACK_KING.move )
-                    else if (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty ) )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_BLACK_QUEEN.move )
                 else
-                    if      (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING)  and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING)  and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty ) )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_WHITE_KING.move )
-                    else if (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty ) )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_WHITE_QUEEN.move )
 
             when 'p'
-                shadowDirections = [0] if stopAtColor is 'w'
-                shadowDirections = [4] if stopAtColor is 'b'
+                shadowDirections = [0] if @turn is 'w'
+                shadowDirections = [4] if @turn is 'b'
                 allShadows = @_computeShadows(squareKey, shadowDirections, '*')
-                nonTakingMoves = CMGBitBoard.binAnd( CMGPosition.PAWN_NON_TAKING_MOVES[squareKey], CMGBitBoard.binNot(allShadows) )
-                out = CMGBitBoard.binOr( CMGPosition.PAWN_TAKING_MOVES[squareKey], nonTakingMoves )
+
+                # Remember that CMGPosition.PAWN_(NON_)TAKING_MOVES[<color>] is shorter, because pawns on raws 1 and 8 cannot take anything
+                pawnMoveArrayKey = squareKey - 8
+                nonTakingMoves = CMGBitBoard.binAnd( CMGPosition.PAWN_NON_TAKING_MOVES[@turn][pawnMoveArrayKey], CMGBitBoard.binNot(allShadows) )
+                takingMoves = CMGBitBoard.binAnd( CMGPosition.PAWN_TAKING_MOVES[@turn][pawnMoveArrayKey], CMGBitBoard.binNot( @bitBoards.allPiecesOfColor[@turn] ) )
+                out = CMGBitBoard.binOr( takingMoves, nonTakingMoves )
 
         return out
 
@@ -521,17 +578,17 @@ class CMGPosition
             if pieceSquare is squareKey
                 continue # skip the light origin itself
 
-            pieceSquareBitBoard = CMGBitBoard.valueOfSquare(pieceSquare)
-
             exclusionMap = false
             if stopAfterOnly
+                pieceSquareBitBoard = CMGBitBoard.valueOfSquare(pieceSquare)
                 exclusionMap = CMGBitBoard.binNot( pieceSquareBitBoard )
 
             for direction in directions
-                if CMGBitBoard.binAnd( CMGPosition._light(pieceSquare, direction), squareKeyBitBoard )
-                    shadowMap = CMGBitBoard.binOr( shadowMap, CMGPosition._shadow(pieceSquare, direction) )
+                if not CMGBitBoard.isZero( CMGBitBoard.binAnd( CMGPosition._light(pieceSquare, direction), squareKeyBitBoard ) )
+                    newShadows = CMGPosition._shadow(pieceSquare, direction)
                     if exclusionMap
-                        shadowMap = CMGBitBoard.binAnd( shadowMap, exclusionMap )
+                        newShadows = CMGBitBoard.binAnd( newShadows, exclusionMap )
+                    shadowMap = CMGBitBoard.binOr( shadowMap, newShadows )
                     break # correct direction found, break 1 level
         return shadowMap
 
@@ -545,7 +602,7 @@ class CMGPosition
 
         if move.fromPiece.type is 'p' and ( Math.abs(move.toSquare - move.fromSquare) % 8 ) isnt 0 and move.takenPiece is false
             # A taking move with a pawn, but no piece has been taken
-            return false
+            return CMGPosition.PSEUDO_ONLY
 
         pseudoThreatsOnPlayerAfterMove = move.newPosition._bitBoardOfPseudoMoves(@opponentColorCode(), @turn)
 
@@ -553,7 +610,7 @@ class CMGPosition
         kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[@turn]['k']
         kingAttackBitBoard = CMGBitBoard.binAnd( kingBitBoard, pseudoThreatsOnPlayerAfterMove )
         if not CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
-            return false
+            return CMGPosition.PSEUDO_ONLY
 
         # Test if castling crosses a square that is under attack
         if move.fromPiece is 'k' and Math.abs(move.toSquare - move.fromSquare) is 2
@@ -561,7 +618,7 @@ class CMGPosition
             crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare)
             crossedSquareAttackBitBoard = CMGBitBoard.binAnd( crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove )
             if not CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
-                return false
+                return CMGPosition.PSEUDO_ONLY
 
         # promotion = false
         # if move.toPiece isnt move.fromPiece
@@ -667,6 +724,10 @@ class CMGMove
         @param takenOnSquare (false|integer)
         ###
 
+        @fromSquare     = CMGUtil.toString(@fromSquare)
+        @toSquare       = CMGUtil.toString(@toSquare)
+        @takenOnSquare  = CMGUtil.toString(@takenOnSquare)
+
     toString:   () ->
         CMGPosition._squareToString(fromSquare) + CMGPosition._squareToString(toSquare)
 
@@ -704,6 +765,7 @@ class CMGPiece
 
         if charCode isnt 114 and charCode isnt 110 and charCode isnt 98 and charCode isnt 113 and charCode isnt 107 and charCode isnt 112
             # Not in r, n, b, q, k, p
+            console.log("Invalid character code to represent a chess piece: #{charCode}")
             throw "Invalid character code to represent a chess piece: #{charCode}"
 
         return [color, String.fromCharCode(charCode)]
@@ -718,6 +780,32 @@ class CMGPiece
             out = String.fromCharCode( @type.charCodeAt(0) - 32 ) # 97 - 65, i.e. code('a') - code('A')
 
         return out
+
+# =============================================================================
+
+class CMGUtil
+    @cloneObject: (obj) ->
+        ###
+        Function to clone an object
+
+        Source: http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+        ###
+        if obj is null or typeof(obj) isnt 'object'
+            return obj
+
+        out = new obj.constructor()
+
+        for key, value of obj
+            out[key] = @cloneObject(value)
+
+        out
+
+    @toString: (value) ->
+        if typeof value isnt 'string'
+            return '' + value
+
+        return value
+
 
 
 # =============================================================================

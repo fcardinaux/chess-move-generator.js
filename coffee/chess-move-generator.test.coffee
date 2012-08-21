@@ -8,9 +8,19 @@ Licence: see README.md
 About Expresso: http://visionmedia.github.com/expresso/
 ###
 
-chessMoveGenerator = require('./chess-move-generator')
+chessMoveGenerator = require('../javascript/chess-move-generator')
 positionClass = chessMoveGenerator.position
 bitBoardClass = chessMoveGenerator.bitBoard
+
+# Set the performance test depth here
+DEPTH = 1
+
+LOG = (x) ->
+    # console.log(x)
+
+# http://stackoverflow.com/a/498995
+trimString = (str) ->
+    str.replace(/^\s\s*/, '').replace(/\s\s*$/, '')
 
 compareArrays = (arr1, arr2) ->
     # Inpired by http://stackoverflow.com/a/3432978
@@ -33,7 +43,7 @@ compareArrays = (arr1, arr2) ->
 
     return [missingInArr1, missingInArr2]
 
-module.exports =
+module.nonexports =
     'test CMGBitBoard#valueOfSquare': (beforeExit, assert) ->
         assert.eql([   0x0, 0x8000,    0x0,    0x0], bitBoardClass.valueOfSquare(31))
 
@@ -130,6 +140,7 @@ module.exports =
             positionObj = positionClass.fromString(positionString)
             assert.eql(colorCode, positionObj.opponentColorCode())
 
+module.exports =
     'test CMGPosition#allPossibleMoves': (beforeExit, assert) ->
         testData = [
             [
@@ -140,16 +151,229 @@ module.exports =
                     "7R/4k3/8/8/8/8/8/4K3 w - - 2 2",
                     "7R/3k4/8/8/8/8/8/4K3 w - - 2 2"
                 ]
+            ],
+            [
+                "4b2k/pppppppp/8/8/8/8/8/4K3 b - - 1 1",
+                [
+                    # King moves
+                    "4b1k1/pppppppp/8/8/8/8/8/4K3 w - - 2 2",
+                    # Pawn moves
+                    "4b2k/1ppppppp/p7/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/p1pppppp/1p6/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/pp1ppppp/2p5/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/ppp1pppp/3p4/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/pppp1ppp/4p3/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/ppppp1pp/5p2/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/pppppp1p/6p1/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/ppppppp1/7p/8/8/8/8/4K3 w - - 0 2",
+                    "4b2k/1ppppppp/8/p7/8/8/8/4K3 w - a6 0 2",
+                    "4b2k/p1pppppp/8/1p6/8/8/8/4K3 w - b6 0 2",
+                    "4b2k/pp1ppppp/8/2p5/8/8/8/4K3 w - c6 0 2",
+                    "4b2k/ppp1pppp/8/3p4/8/8/8/4K3 w - d6 0 2",
+                    "4b2k/pppp1ppp/8/4p3/8/8/8/4K3 w - e6 0 2",
+                    "4b2k/ppppp1pp/8/5p2/8/8/8/4K3 w - f6 0 2",
+                    "4b2k/pppppp1p/8/6p1/8/8/8/4K3 w - g6 0 2",
+                    "4b2k/ppppppp1/8/7p/8/8/8/4K3 w - h6 0 2",
+                ]
+            ],
+            [
+                "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                [
+                    # Rooks move
+                    "1r2k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2",
+                    "2r1k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2",
+                    "3rk2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2",
+
+                    "r3k1r1/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
+                    "r3kr2/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
+                    "r3k3/p1ppqpbr/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
+                    "r3k3/p1ppqpb1/bn2pnpr/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
+                    "r3k3/p1ppqpb1/bn2pnp1/3P3r/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
+                    "r3k3/p1ppqpb1/bn2pnp1/3P4/1p2P1Nr/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
+                    # King moves
+                    "r2k3r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
+                    "r4k1r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
+                    # Castling
+                    "2kr3r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
+                    "r4rk1/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
+                    # Queen moves
+                    "r2qk2r/p1pp1pb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3kq1r/p1pp1pb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1pp1pb1/bn1qpnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1pp1pb1/bn2pnp1/2qP4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    # Bishops move
+                    "r1b1k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/pbppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/1n2pnp1/1b1P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/1n2pnp1/3P4/1pb1P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2Nb1Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBbPPP/R3K2R w KQkq - 0 2",
+                    "r3kb1r/p1ppqp2/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqp2/bn2pnpb/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    # Knights move
+                    "r1n1k2r/p1ppqpb1/b3pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/b3pnp1/3n4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+                    "r3k2r/p1ppqpb1/b3pnp1/3P4/1pn1P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/b3pnp1/3P4/np2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k1nr/p1ppqpb1/bn2p1p1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpbn/bn2p1p1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/bn2p1p1/3P3n/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
+                    "r3k2r/p1ppqpb1/bn2p1p1/3P4/1p2P1n1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+                    "r3k2r/p1ppqpb1/bn2p1p1/3P4/1p2n1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+                    "r3k2r/p1ppqpb1/bn2p1p1/3n4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+                    # Pawns move
+                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/4P1N1/1pN2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/4P1N1/2p2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+
+                    "r3k2r/p2pqpb1/bnp1pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+                    "r3k2r/p2pqpb1/bn2pnp1/2pP4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 2",
+
+                    "r3k2r/p1p1qpb1/bn1ppnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+
+                    "r3k2r/p1ppqpb1/bn3np1/3p4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+                    "r3k2r/p1ppqpb1/bn3np1/3Pp3/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+
+                    "r3k2r/p1ppqpb1/bn2pn2/3P2p1/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
+
+                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 2"
+                ]
+            ],
+            [
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+                [
+                    # Rooks move
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2R1K2R b Kkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/3RK2R b Kkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K1R1 b Qkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3KR2 b Qkq - 1 1",
+                    # King moves
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R2K3R b kq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4K1R b kq - 1 1",
+                    # Castling
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2KR3R b kq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 1 1",
+                    # Queen moves
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1Q2p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N3Qp/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N4Q/PPPBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PQ2/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PNQ2/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1Q1/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN2Q/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    # Bishops move
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPP1BPPP/R1B1K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1BQ1p/PPP1BPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PB2/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN1B1/1p2P3/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnpB/3PN3/1p2P3/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3KB1R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R2BK2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NB1Q1p/PPPB1PPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1pB1P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1",
+                    # Knights move
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q1p/PPPBBPPP/RN2K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q1p/PPPBBPPP/R2NK2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Np2P3/5Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/1N1PN3/1p2P3/5Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P3/2NN1Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1pN1P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bnN1pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
+                    "r3k2r/p1ppqpb1/bn2pnN1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1pNqpb1/bn2pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqNb1/bn2pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
+                    # Pawns move
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 0 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/1PN2Q1p/P1PBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqpb1/bn1Ppnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqpb1/bn2Pnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2QPp/PPPBBP1P/R3K2R b KQkq - 0 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1P1/2N2Q1p/PPPBBP1P/R3K2R b KQkq g3 0 1",
+                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1P/PPPBBP1P/R3K2R b KQkq - 0 1"
+                ]
             ]
         ]
 
         for [startPositionString, expectedEndPositionStrings] in testData
             positionObj = positionClass.fromString(startPositionString)
+
+            LOG('Start = ' + startPositionString)
+            LOG('Expected: ')
+            for eps in expectedEndPositionStrings
+                LOG(eps)
+            LOG('Calculated: ')
+
             calculatedMoves = positionObj.allPossibleMoves()
             calculatedEndPositionStrings = []
             for calculatedMove in calculatedMoves
+                LOG(calculatedMove.newPosition.toString())
                 calculatedEndPositionStrings.push( calculatedMove.newPosition.toString() )
             result = compareArrays expectedEndPositionStrings, calculatedEndPositionStrings
 
             assert.eql([[], []], result)
+
+    'test perftsuite.txt': (beforeExit, assert) ->
+        fs = require('fs');
+
+        testDepth = (positionObj, counters, currentDepth, maxDepth) ->
+            moves = positionObj.allPossibleMoves()
+
+            counters[currentDepth] += moves.length
+
+            currentDepth++
+            if currentDepth >= maxDepth
+                return true
+
+            for move in moves
+                testDepth(move.newPosition, counters, currentDepth + 1, maxDepth)
+
+            return true
+
+        testLine = (line) ->
+            line = trimString line
+            if line is ''
+                return
+            elems = line.split(' ;')
+            positionString = elems.shift()
+
+            # Make sure the position string is correctly transformed into a position object
+            positionObj = positionClass.fromString(positionString)
+            assert.eql(positionString, positionObj.toString())
+
+            # Adjust the maximal depth to the data quantity
+            maxDepth = DEPTH
+            if elems.length < maxDepth
+                maxDepth = elem.length
+
+            # Initialize the counters
+            counters = []
+            iDepth = 0
+            while iDepth < maxDepth
+                counters.push(0)
+                iDepth++
+
+            # Count
+            testDepth(positionObj, counters, 0, maxDepth)
+
+            # Now compare the counters to the expected result
+            for counter, counterId in counters
+                expectedQuantity = parseInt(elems[counterId].split(' ')[1])
+                assert.eql(counter, expectedQuantity)
+
+        testFile = (err, data) ->
+            if err
+                console.log(err)
+                return
+
+            lines = data.split("\n")
+
+            lines.map(testLine)
+
+        fs.readFile('./test-data/perftsuite.txt', 'utf8', testFile);
 

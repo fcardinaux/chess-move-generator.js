@@ -5,7 +5,62 @@ Chess Move Generator
 
 Licence: see README.md
 */
-var CMGBitBoard, CMGMove, CMGPiece, CMGPosition;
+var CMGBitBoard, CMGMove, CMGPiece, CMGPosition, CMGUtil, clg;
+
+clg = (function() {
+
+  function clg() {}
+
+  clg.opened = false;
+
+  clg.open = function(val) {
+    if (val == null) val = true;
+    return this.opened = val;
+  };
+
+  clg.close = function() {
+    return this.opened = false;
+  };
+
+  clg.log = function(x, isBitBoard) {
+    if (isBitBoard == null) isBitBoard = false;
+    if (!this.opened) return;
+    if (isBitBoard) {
+      return this._logBitBoard(x);
+    } else {
+      return console.log(x);
+    }
+  };
+
+  clg._logBitBoard = function(bb) {
+    /*
+            For debugging
+    */
+    var bit, line, lines, quadrant, quadrantKey, text, val, _i, _len;
+    console.log(JSON.stringify(bb) + ':');
+    console.log('+--------+');
+    val = ['.', 'x'];
+    for (quadrantKey = 3; quadrantKey >= 0; quadrantKey--) {
+      quadrant = bb[quadrantKey];
+      lines = [];
+      lines[0] = Math.floor(quadrant / 256);
+      lines[1] = quadrant % 256;
+      for (_i = 0, _len = lines.length; _i < _len; _i++) {
+        line = lines[_i];
+        text = '';
+        for (bit = 0; bit <= 7; bit++) {
+          text += val[line % 2];
+          line = Math.floor(line / 2);
+        }
+        console.log('|' + text + '|');
+      }
+    }
+    return console.log('+--------+');
+  };
+
+  return clg;
+
+})();
 
 CMGBitBoard = (function() {
 
@@ -23,6 +78,10 @@ CMGBitBoard = (function() {
     return true;
   };
 
+  CMGBitBoard.isZero = function(bb) {
+    return this.binEqual(bb, this.EMPTY_BOARD);
+  };
+
   CMGBitBoard.binAnd = function(bb1, bb2) {
     return [bb1[0] & bb2[0], bb1[1] & bb2[1], bb1[2] & bb2[2], bb1[3] & bb2[3]];
   };
@@ -36,11 +95,10 @@ CMGBitBoard = (function() {
   };
 
   CMGBitBoard.binNot = function(bb) {
-    return [~bb[0], ~bb[1], ~bb[2], ~bb[3]];
+    return [~bb[0] & 0xffff, ~bb[1] & 0xffff, ~bb[2] & 0xffff, ~bb[3] & 0xffff];
   };
 
   CMGBitBoard.valueOfSquare = function(square) {
-    if (typeof square === 'string') square = parseInt(square);
     return this.SQUARE_VALUES[square];
   };
 
@@ -80,6 +138,8 @@ CMGBitBoard = (function() {
 })();
 
 CMGPosition = (function() {
+
+  CMGPosition.PSEUDO_ONLY = false;
 
   CMGPosition.ROW_SPAN = 8;
 
@@ -143,17 +203,6 @@ CMGPosition = (function() {
     enPassantSquare = CMGPosition._enPassantStringToSquare(enPassantString);
     turn = CMGPosition._turnCharToValue(turnChar);
     return new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber);
-  };
-
-  CMGPosition._clone = function(obj) {
-    var key, out, value;
-    if (obj === null || typeof obj !== 'object') return obj;
-    out = new obj.constructor();
-    for (key in obj) {
-      value = obj[key];
-      out[key] = this._clone(value);
-    }
-    return out;
   };
 
   CMGPosition._boardStringToPieces = function(boardString) {
@@ -313,8 +362,6 @@ CMGPosition = (function() {
             @param halfMoveClock (integer)
             @param moveNumber (integer)
     */
-    this.bitBoards = {};
-    this._generateBitBoards();
     this.piecesOfColor = {
       b: {},
       w: {}
@@ -326,6 +373,8 @@ CMGPosition = (function() {
         this.piecesOfColor[piece.color][squareId] = piece;
       }
     }
+    this.bitBoards = {};
+    this._generateBitBoards();
   }
 
   CMGPosition.prototype.playerColorCode = function() {
@@ -357,28 +406,39 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype.allPossibleMovesFromSquare = function(squareKey) {
-    var move, newPieceType, out, piece, pseudoMove, pseudoMoveBitboard, pseudoMoves, takenOnSquare, takenPiece, target, targets, toPiece, _i, _j, _k, _len, _len2, _len3, _ref;
+    var castling, move, newPiece, newPieceType, out, piece, pseudoMove, pseudoMoveBitBoard, pseudoMoves, takenOnSquare, takenPiece, target, targets, toPiece, _i, _j, _k, _len, _len2, _len3, _ref;
+    squareKey = CMGUtil.toString(squareKey);
     piece = this._getPieceOnSquare(squareKey);
     if (!piece) return 0x0;
     if (piece.color !== this.turn) return 0x0;
-    pseudoMoveBitboard = this._bitBoardOfPseudoMovesFromSquare(squareKey, piece, this.turn);
+    pseudoMoveBitBoard = this._bitBoardOfPseudoMovesFromSquare(squareKey, piece, this.turn, this.opponentColorCode());
     pseudoMoves = [];
-    targets = CMGBitBoard.bitBoardToSquareKeyArray(pseudoMoveBitboard);
+    targets = CMGBitBoard.bitBoardToSquareKeyArray(pseudoMoveBitBoard);
     for (_i = 0, _len = targets.length; _i < _len; _i++) {
       target = targets[_i];
       toPiece = piece;
       takenPiece = this._getPieceOnSquare(target);
+      takenOnSquare = false;
       if (takenPiece) takenOnSquare = target;
       if (piece.type === 'p' && (target >= CMGPosition.TOP_LEFT_CORNER || target <= CMGPosition.BOTTOM_RIGHT_CORNER)) {
         _ref = ['q', 'r', 'n', 'b'];
         for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
           newPieceType = _ref[_j];
-          move = new CMGMove(squareKey, piece, target, newPieceType, null, false, takenPiece, takenOnSquare);
+          newPiece = new CMGPiece(piece.color, newPieceType);
+          move = new CMGMove(squareKey, piece, target, newPiece, null, false, takenPiece, takenOnSquare);
           move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
           pseudoMoves.push(move);
         }
       } else {
-        move = new CMGMove(squareKey, piece, target, toPiece, null, false, takenPiece, takenOnSquare);
+        castling = false;
+        if (piece.type === 'k' && Math.abs(target - squareKey) === 2) {
+          if (target > squareKey) {
+            castling = 'k';
+          } else {
+            castling = 'q';
+          }
+        }
+        move = new CMGMove(squareKey, piece, target, toPiece, null, castling, takenPiece, takenOnSquare);
         move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
         pseudoMoves.push(move);
       }
@@ -392,8 +452,8 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype._getNewPositionObjectAfterMove = function(move) {
-    var allowedCastling, enPassantSquare, halfMoveClock, moveNumber, pieces, turn;
-    pieces = CMGPosition._clone(this.pieces);
+    var allowedCastling, enPassantSquare, halfMoveClock, moveNumber, pawnJump, pieces, turn;
+    pieces = CMGUtil.cloneObject(this.pieces);
     pieces[move.fromSquare] = null;
     delete pieces[move.fromSquare];
     if (move.takenOnSquare) {
@@ -412,17 +472,17 @@ CMGPosition = (function() {
       }
     } else if (move.castling === 'q') {
       if (this.turn === 'b') {
-        pieces[072] = pieces[070];
+        pieces[073] = pieces[070];
         delete pieces[070];
       }
       if (this.turn === 'w') {
-        pieces[2] = pieces[0];
+        pieces[3] = pieces[0];
         delete pieces[0];
       }
     }
     turn = this.opponentColorCode();
     allowedCastling = this.allowedCastling;
-    switch (move.fromSquare) {
+    switch (parseInt(move.fromSquare)) {
       case 0:
         allowedCastling &= ~CMGPosition.CASTLING_CODE_WHITE_QUEEN;
         break;
@@ -442,11 +502,25 @@ CMGPosition = (function() {
         allowedCastling &= ~CMGPosition.CASTLING_CODE_BLACK_KING;
     }
     enPassantSquare = false;
+    if (move.fromPiece.type === 'p') {
+      pawnJump = move.toSquare - move.fromSquare;
+      if (Math.abs(pawnJump) === 16) {
+        enPassantSquare = move.toSquare - pawnJump / 2;
+      }
+    }
     halfMoveClock = this.halfMoveClock;
     moveNumber = this.moveNumber;
-    if (moveNumber > 0) {
-      halfMoveClock += 1;
+    if (moveNumber === 0) {
+      halfMoveClock = 0;
+    } else {
       if (turn === 'w') moveNumber += 1;
+      if (move.fromPiece.type === 'p') {
+        halfMoveClock = 0;
+      } else if (move.takenPiece) {
+        halfMoveClock = 0;
+      } else {
+        halfMoveClock += 1;
+      }
     }
     return new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber);
   };
@@ -492,7 +566,7 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype._bitBoardOfPseudoMovesFromSquare = function(squareKey, movedPiece, stopAtColor, stopAfterColor) {
-    var allShadows, nonTakingMoves, out, shadowDirections, shadows;
+    var allShadows, nonTakingMoves, out, pawnMoveArrayKey, shadowDirections, shadows, takingMoves;
     if (stopAtColor == null) stopAtColor = false;
     if (stopAfterColor == null) stopAfterColor = false;
     out = CMGBitBoard.EMPTY_BOARD;
@@ -519,23 +593,27 @@ CMGPosition = (function() {
         if (movedPiece.color === 'b') {
           if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty))) {
             out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_BLACK_KING.move);
-          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty))) {
+          }
+          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty))) {
             out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_BLACK_QUEEN.move);
           }
         } else {
           if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty))) {
             out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_WHITE_KING.move);
-          } else if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty))) {
+          }
+          if ((this.allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) && CMGBitBoard.isZero(CMGBitBoard.binAnd(this.bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty))) {
             out = CMGBitBoard.binOr(out, CMGPosition.CASTLING_WHITE_QUEEN.move);
           }
         }
         break;
       case 'p':
-        if (stopAtColor === 'w') shadowDirections = [0];
-        if (stopAtColor === 'b') shadowDirections = [4];
+        if (this.turn === 'w') shadowDirections = [0];
+        if (this.turn === 'b') shadowDirections = [4];
         allShadows = this._computeShadows(squareKey, shadowDirections, '*');
-        nonTakingMoves = CMGBitBoard.binAnd(CMGPosition.PAWN_NON_TAKING_MOVES[squareKey], CMGBitBoard.binNot(allShadows));
-        out = CMGBitBoard.binOr(CMGPosition.PAWN_TAKING_MOVES[squareKey], nonTakingMoves);
+        pawnMoveArrayKey = squareKey - 8;
+        nonTakingMoves = CMGBitBoard.binAnd(CMGPosition.PAWN_NON_TAKING_MOVES[this.turn][pawnMoveArrayKey], CMGBitBoard.binNot(allShadows));
+        takingMoves = CMGBitBoard.binAnd(CMGPosition.PAWN_TAKING_MOVES[this.turn][pawnMoveArrayKey], CMGBitBoard.binNot(this.bitBoards.allPiecesOfColor[this.turn]));
+        out = CMGBitBoard.binOr(takingMoves, nonTakingMoves);
     }
     return out;
   };
@@ -555,7 +633,7 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype._computeSingleBehaviorShadows = function(squareKey, directions, stoppingColor, stopAfterOnly) {
-    var direction, exclusionMap, piece, pieceSquare, pieceSquareBitBoard, pieces, shadowMap, squareKeyBitBoard, _i, _len;
+    var direction, exclusionMap, newShadows, piece, pieceSquare, pieceSquareBitBoard, pieces, shadowMap, squareKeyBitBoard, _i, _len;
     if (stoppingColor == null) stoppingColor = '*';
     if (stopAfterOnly == null) stopAfterOnly = false;
     shadowMap = CMGBitBoard.EMPTY_BOARD;
@@ -569,16 +647,19 @@ CMGPosition = (function() {
     for (pieceSquare in pieces) {
       piece = pieces[pieceSquare];
       if (pieceSquare === squareKey) continue;
-      pieceSquareBitBoard = CMGBitBoard.valueOfSquare(pieceSquare);
       exclusionMap = false;
-      if (stopAfterOnly) exclusionMap = CMGBitBoard.binNot(pieceSquareBitBoard);
+      if (stopAfterOnly) {
+        pieceSquareBitBoard = CMGBitBoard.valueOfSquare(pieceSquare);
+        exclusionMap = CMGBitBoard.binNot(pieceSquareBitBoard);
+      }
       for (_i = 0, _len = directions.length; _i < _len; _i++) {
         direction = directions[_i];
-        if (CMGBitBoard.binAnd(CMGPosition._light(pieceSquare, direction), squareKeyBitBoard)) {
-          shadowMap = CMGBitBoard.binOr(shadowMap, CMGPosition._shadow(pieceSquare, direction));
+        if (!CMGBitBoard.isZero(CMGBitBoard.binAnd(CMGPosition._light(pieceSquare, direction), squareKeyBitBoard))) {
+          newShadows = CMGPosition._shadow(pieceSquare, direction);
           if (exclusionMap) {
-            shadowMap = CMGBitBoard.binAnd(shadowMap, exclusionMap);
+            newShadows = CMGBitBoard.binAnd(newShadows, exclusionMap);
           }
+          shadowMap = CMGBitBoard.binOr(shadowMap, newShadows);
           break;
         }
       }
@@ -595,20 +676,20 @@ CMGPosition = (function() {
     */
     var crossedSquare, crossedSquareAttackBitBoard, crossedSquareBitBoard, kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
     if (move.fromPiece.type === 'p' && (Math.abs(move.toSquare - move.fromSquare) % 8) !== 0 && move.takenPiece === false) {
-      return false;
+      return CMGPosition.PSEUDO_ONLY;
     }
     pseudoThreatsOnPlayerAfterMove = move.newPosition._bitBoardOfPseudoMoves(this.opponentColorCode(), this.turn);
     kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[this.turn]['k'];
     kingAttackBitBoard = CMGBitBoard.binAnd(kingBitBoard, pseudoThreatsOnPlayerAfterMove);
     if (!CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
-      return false;
+      return CMGPosition.PSEUDO_ONLY;
     }
     if (move.fromPiece === 'k' && Math.abs(move.toSquare - move.fromSquare) === 2) {
       crossedSquare = move.fromSquare + (move.toSquare - move.fromSquare) / 2;
       crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare);
       crossedSquareAttackBitBoard = CMGBitBoard.binAnd(crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove);
       if (!CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
-        return false;
+        return CMGPosition.PSEUDO_ONLY;
       }
     }
     return true;
@@ -730,6 +811,9 @@ CMGMove = (function() {
             @param takenPiece (false|CMGPiece)
             @param takenOnSquare (false|integer)
     */
+    this.fromSquare = CMGUtil.toString(this.fromSquare);
+    this.toSquare = CMGUtil.toString(this.toSquare);
+    this.takenOnSquare = CMGUtil.toString(this.takenOnSquare);
   }
 
   CMGMove.prototype.toString = function() {
@@ -772,6 +856,7 @@ CMGPiece = (function() {
       charCode += 32;
     }
     if (charCode !== 114 && charCode !== 110 && charCode !== 98 && charCode !== 113 && charCode !== 107 && charCode !== 112) {
+      console.log("Invalid character code to represent a chess piece: " + charCode);
       throw "Invalid character code to represent a chess piece: " + charCode;
     }
     return [color, String.fromCharCode(charCode)];
@@ -790,6 +875,35 @@ CMGPiece = (function() {
 
 })();
 
+CMGUtil = (function() {
+
+  function CMGUtil() {}
+
+  CMGUtil.cloneObject = function(obj) {
+    /*
+            Function to clone an object
+    
+            Source: http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+    */
+    var key, out, value;
+    if (obj === null || typeof obj !== 'object') return obj;
+    out = new obj.constructor();
+    for (key in obj) {
+      value = obj[key];
+      out[key] = this.cloneObject(value);
+    }
+    return out;
+  };
+
+  CMGUtil.toString = function(value) {
+    if (typeof value !== 'string') return '' + value;
+    return value;
+  };
+
+  return CMGUtil;
+
+})();
+
 module.exports = {
   bitBoard: CMGBitBoard,
   position: CMGPosition,
@@ -803,12 +917,12 @@ CMGPosition.BISHOP_MOVES = [[512,2052,8208,32832],[1280,4104,16416,128],[2560,82
 CMGPosition.KNIGHT_MOVES = [[1024,2,0,0],[2048,5,0,0],[4352,10,0,0],[8704,20,0,0],[17408,40,0,0],[34816,80,0,0],[4096,160,0,0],[8192,64,0,0],[4,516,0,0],[8,1288,0,0],[17,2577,0,0],[34,5154,0,0],[68,10308,0,0],[136,20616,0,0],[16,40976,0,0],[32,16416,0,0],[1026,1024,2,0],[2053,2048,5,0],[4362,4352,10,0],[8724,8704,20,0],[17448,17408,40,0],[34896,34816,80,0],[4256,4096,160,0],[8256,8192,64,0],[512,4,516,0],[1280,8,1288,0],[2560,17,2577,0],[5120,34,5154,0],[10240,68,10308,0],[20480,136,20616,0],[40960,16,40976,0],[16384,32,16416,0],[0,1026,1024,2],[0,2053,2048,5],[0,4362,4352,10],[0,8724,8704,20],[0,17448,17408,40],[0,34896,34816,80],[0,4256,4096,160],[0,8256,8192,64],[0,512,4,516],[0,1280,8,1288],[0,2560,17,2577],[0,5120,34,5154],[0,10240,68,10308],[0,20480,136,20616],[0,40960,16,40976],[0,16384,32,16416],[0,0,1026,1024],[0,0,2053,2048],[0,0,4362,4352],[0,0,8724,8704],[0,0,17448,17408],[0,0,34896,34816],[0,0,4256,4096],[0,0,8256,8192],[0,0,512,4],[0,0,1280,8],[0,0,2560,17],[0,0,5120,34],[0,0,10240,68],[0,0,20480,136],[0,0,40960,16],[0,0,16384,32]];
 CMGPosition.KING_MOVES_WITHOUT_CASTLING = [[770,0,0,0],[1797,0,0,0],[3594,0,0,0],[7188,0,0,0],[14376,0,0,0],[28752,0,0,0],[57504,0,0,0],[49216,0,0,0],[515,3,0,0],[1287,7,0,0],[2574,14,0,0],[5148,28,0,0],[10296,56,0,0],[20592,112,0,0],[41184,224,0,0],[16576,192,0,0],[768,770,0,0],[1792,1797,0,0],[3584,3594,0,0],[7168,7188,0,0],[14336,14376,0,0],[28672,28752,0,0],[57344,57504,0,0],[49152,49216,0,0],[0,515,3,0],[0,1287,7,0],[0,2574,14,0],[0,5148,28,0],[0,10296,56,0],[0,20592,112,0],[0,41184,224,0],[0,16576,192,0],[0,768,770,0],[0,1792,1797,0],[0,3584,3594,0],[0,7168,7188,0],[0,14336,14376,0],[0,28672,28752,0],[0,57344,57504,0],[0,49152,49216,0],[0,0,515,3],[0,0,1287,7],[0,0,2574,14],[0,0,5148,28],[0,0,10296,56],[0,0,20592,112],[0,0,41184,224],[0,0,16576,192],[0,0,768,770],[0,0,1792,1797],[0,0,3584,3594],[0,0,7168,7188],[0,0,14336,14376],[0,0,28672,28752],[0,0,57344,57504],[0,0,49152,49216],[0,0,0,515],[0,0,0,1287],[0,0,0,2574],[0,0,0,5148],[0,0,0,10296],[0,0,0,20592],[0,0,0,41184],[0,0,0,16576]];
 CMGPosition.PAWN_NON_TAKING_MOVES = {
-    b: [[0,1,0,0],[0,2,0,0],[0,4,0,0],[0,8,0,0],[0,16,0,0],[0,32,0,0],[0,64,0,0],[0,128,0,0],[0,256,0,0],[0,512,0,0],[0,1024,0,0],[0,2048,0,0],[0,4096,0,0],[0,8192,0,0],[0,16384,0,0],[0,32768,0,0],[0,0,1,0],[0,0,2,0],[0,0,4,0],[0,0,8,0],[0,0,16,0],[0,0,32,0],[0,0,64,0],[0,0,128,0],[0,0,256,0],[0,0,512,0],[0,0,1024,0],[0,0,2048,0],[0,0,4096,0],[0,0,8192,0],[0,0,16384,0],[0,0,32768,0],[0,0,0,1],[0,0,0,2],[0,0,0,4],[0,0,0,8],[0,0,0,16],[0,0,0,32],[0,0,0,64],[0,0,0,128],[0,0,257,0],[0,0,514,0],[0,0,1028,0],[0,0,2056,0],[0,0,4112,0],[0,0,8224,0],[0,0,16448,0],[0,0,32896,0]], 
-    w: [[1,0,0,0],[2,0,0,0],[4,0,0,0],[8,0,0,0],[16,0,0,0],[32,0,0,0],[64,0,0,0],[128,0,0,0],[0,256,0,0],[0,512,0,0],[0,1024,0,0],[0,2048,0,0],[0,4096,0,0],[0,8192,0,0],[0,16384,0,0],[0,32768,0,0],[0,0,1,0],[0,0,2,0],[0,0,4,0],[0,0,8,0],[0,0,16,0],[0,0,32,0],[0,0,64,0],[0,0,128,0],[0,0,256,0],[0,0,512,0],[0,0,1024,0],[0,0,2048,0],[0,0,4096,0],[0,0,8192,0],[0,0,16384,0],[0,0,32768,0],[0,0,0,1],[0,0,0,2],[0,0,0,4],[0,0,0,8],[0,0,0,16],[0,0,0,32],[0,0,0,64],[0,0,0,128],[0,0,0,256],[0,0,0,512],[0,0,0,1024],[0,0,0,2048],[0,0,0,4096],[0,0,0,8192],[0,0,0,16384],[0,0,0,32768]]
+    b: [[1,0,0,0],[2,0,0,0],[4,0,0,0],[8,0,0,0],[16,0,0,0],[32,0,0,0],[64,0,0,0],[128,0,0,0],[256,0,0,0],[512,0,0,0],[1024,0,0,0],[2048,0,0,0],[4096,0,0,0],[8192,0,0,0],[16384,0,0,0],[32768,0,0,0],[0,1,0,0],[0,2,0,0],[0,4,0,0],[0,8,0,0],[0,16,0,0],[0,32,0,0],[0,64,0,0],[0,128,0,0],[0,256,0,0],[0,512,0,0],[0,1024,0,0],[0,2048,0,0],[0,4096,0,0],[0,8192,0,0],[0,16384,0,0],[0,32768,0,0],[0,0,1,0],[0,0,2,0],[0,0,4,0],[0,0,8,0],[0,0,16,0],[0,0,32,0],[0,0,64,0],[0,0,128,0],[0,0,257,0],[0,0,514,0],[0,0,1028,0],[0,0,2056,0],[0,0,4112,0],[0,0,8224,0],[0,0,16448,0],[0,0,32896,0]], 
+    w: [[0,257,0,0],[0,514,0,0],[0,1028,0,0],[0,2056,0,0],[0,4112,0,0],[0,8224,0,0],[0,16448,0,0],[0,32896,0,0],[0,256,0,0],[0,512,0,0],[0,1024,0,0],[0,2048,0,0],[0,4096,0,0],[0,8192,0,0],[0,16384,0,0],[0,32768,0,0],[0,0,1,0],[0,0,2,0],[0,0,4,0],[0,0,8,0],[0,0,16,0],[0,0,32,0],[0,0,64,0],[0,0,128,0],[0,0,256,0],[0,0,512,0],[0,0,1024,0],[0,0,2048,0],[0,0,4096,0],[0,0,8192,0],[0,0,16384,0],[0,0,32768,0],[0,0,0,1],[0,0,0,2],[0,0,0,4],[0,0,0,8],[0,0,0,16],[0,0,0,32],[0,0,0,64],[0,0,0,128],[0,0,0,256],[0,0,0,512],[0,0,0,1024],[0,0,0,2048],[0,0,0,4096],[0,0,0,8192],[0,0,0,16384],[0,0,0,32768]]
 };
 CMGPosition.PAWN_TAKING_MOVES = {
     b: [[2,0,0,0],[5,0,0,0],[10,0,0,0],[20,0,0,0],[40,0,0,0],[80,0,0,0],[160,0,0,0],[64,0,0,0],[512,0,0,0],[1280,0,0,0],[2560,0,0,0],[5120,0,0,0],[10240,0,0,0],[20480,0,0,0],[40960,0,0,0],[16384,0,0,0],[0,2,0,0],[0,5,0,0],[0,10,0,0],[0,20,0,0],[0,40,0,0],[0,80,0,0],[0,160,0,0],[0,64,0,0],[0,512,0,0],[0,1280,0,0],[0,2560,0,0],[0,5120,0,0],[0,10240,0,0],[0,20480,0,0],[0,40960,0,0],[0,16384,0,0],[0,0,2,0],[0,0,5,0],[0,0,10,0],[0,0,20,0],[0,0,40,0],[0,0,80,0],[0,0,160,0],[0,0,64,0],[0,0,512,0],[0,0,1280,0],[0,0,2560,0],[0,0,5120,0],[0,0,10240,0],[0,0,20480,0],[0,0,40960,0],[0,0,16384,0]], 
-    w: [[2,0,0,0],[5,0,0,0],[10,0,0,0],[20,0,0,0],[40,0,0,0],[80,0,0,0],[160,0,0,0],[64,0,0,0],[512,0,0,0],[1280,0,0,0],[2560,0,0,0],[5120,0,0,0],[10240,0,0,0],[20480,0,0,0],[40960,0,0,0],[16384,0,0,0],[0,2,0,0],[0,5,0,0],[0,10,0,0],[0,20,0,0],[0,40,0,0],[0,80,0,0],[0,160,0,0],[0,64,0,0],[0,512,0,0],[0,1280,0,0],[0,2560,0,0],[0,5120,0,0],[0,10240,0,0],[0,20480,0,0],[0,40960,0,0],[0,16384,0,0],[0,0,2,0],[0,0,5,0],[0,0,10,0],[0,0,20,0],[0,0,40,0],[0,0,80,0],[0,0,160,0],[0,0,64,0],[0,0,512,0],[0,0,1280,0],[0,0,2560,0],[0,0,5120,0],[0,0,10240,0],[0,0,20480,0],[0,0,40960,0],[0,0,16384,0]]
+    w: [[0,2,0,0],[0,5,0,0],[0,10,0,0],[0,20,0,0],[0,40,0,0],[0,80,0,0],[0,160,0,0],[0,64,0,0],[0,512,0,0],[0,1280,0,0],[0,2560,0,0],[0,5120,0,0],[0,10240,0,0],[0,20480,0,0],[0,40960,0,0],[0,16384,0,0],[0,0,2,0],[0,0,5,0],[0,0,10,0],[0,0,20,0],[0,0,40,0],[0,0,80,0],[0,0,160,0],[0,0,64,0],[0,0,512,0],[0,0,1280,0],[0,0,2560,0],[0,0,5120,0],[0,0,10240,0],[0,0,20480,0],[0,0,40960,0],[0,0,16384,0],[0,0,0,2],[0,0,0,5],[0,0,0,10],[0,0,0,20],[0,0,0,40],[0,0,0,80],[0,0,0,160],[0,0,0,64],[0,0,0,512],[0,0,0,1280],[0,0,0,2560],[0,0,0,5120],[0,0,0,10240],[0,0,0,20480],[0,0,0,40960],[0,0,0,16384]]
 };
 CMGPosition.SHADOWS = [[[257,257,257,257],[513,2052,8208,32832],[255,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0]],[[514,514,514,514],[1026,4104,16416,128],[254,0,0,0],[2,0,0,0],[2,0,0,0],[2,0,0,0],[3,0,0,0],[258,0,0,0]],[[1028,1028,1028,1028],[2052,8208,32832,0],[252,0,0,0],[4,0,0,0],[4,0,0,0],[4,0,0,0],[7,0,0,0],[516,1,0,0]],[[2056,2056,2056,2056],[4104,16416,128,0],[248,0,0,0],[8,0,0,0],[8,0,0,0],[8,0,0,0],[15,0,0,0],[1032,258,0,0]],[[4112,4112,4112,4112],[8208,32832,0,0],[240,0,0,0],[16,0,0,0],[16,0,0,0],[16,0,0,0],[31,0,0,0],[2064,516,1,0]],[[8224,8224,8224,8224],[16416,128,0,0],[224,0,0,0],[32,0,0,0],[32,0,0,0],[32,0,0,0],[63,0,0,0],[4128,1032,258,0]],[[16448,16448,16448,16448],[32832,0,0,0],[192,0,0,0],[64,0,0,0],[64,0,0,0],[64,0,0,0],[127,0,0,0],[8256,2064,516,1]],[[32896,32896,32896,32896],[128,0,0,0],[128,0,0,0],[128,0,0,0],[128,0,0,0],[128,0,0,0],[255,0,0,0],[16512,4128,1032,258]],[[256,257,257,257],[256,1026,4104,16416],[65280,0,0,0],[258,0,0,0],[257,0,0,0],[256,0,0,0],[256,0,0,0],[256,0,0,0]],[[512,514,514,514],[512,2052,8208,32832],[65024,0,0,0],[516,0,0,0],[514,0,0,0],[513,0,0,0],[768,0,0,0],[512,1,0,0]],[[1024,1028,1028,1028],[1024,4104,16416,128],[64512,0,0,0],[1032,0,0,0],[1028,0,0,0],[1026,0,0,0],[1792,0,0,0],[1024,258,0,0]],[[2048,2056,2056,2056],[2048,8208,32832,0],[63488,0,0,0],[2064,0,0,0],[2056,0,0,0],[2052,0,0,0],[3840,0,0,0],[2048,516,1,0]],[[4096,4112,4112,4112],[4096,16416,128,0],[61440,0,0,0],[4128,0,0,0],[4112,0,0,0],[4104,0,0,0],[7936,0,0,0],[4096,1032,258,0]],[[8192,8224,8224,8224],[8192,32832,0,0],[57344,0,0,0],[8256,0,0,0],[8224,0,0,0],[8208,0,0,0],[16128,0,0,0],[8192,2064,516,1]],[[16384,16448,16448,16448],[16384,128,0,0],[49152,0,0,0],[16512,0,0,0],[16448,0,0,0],[16416,0,0,0],[32512,0,0,0],[16384,4128,1032,258]],[[32768,32896,32896,32896],[32768,0,0,0],[32768,0,0,0],[32768,0,0,0],[32896,0,0,0],[32832,0,0,0],[65280,0,0,0],[32768,8256,2064,516]],[[0,257,257,257],[0,513,2052,8208],[0,255,0,0],[516,1,0,0],[257,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]],[[0,514,514,514],[0,1026,4104,16416],[0,254,0,0],[1032,2,0,0],[514,2,0,0],[256,2,0,0],[0,3,0,0],[0,258,0,0]],[[0,1028,1028,1028],[0,2052,8208,32832],[0,252,0,0],[2064,4,0,0],[1028,4,0,0],[513,4,0,0],[0,7,0,0],[0,516,1,0]],[[0,2056,2056,2056],[0,4104,16416,128],[0,248,0,0],[4128,8,0,0],[2056,8,0,0],[1026,8,0,0],[0,15,0,0],[0,1032,258,0]],[[0,4112,4112,4112],[0,8208,32832,0],[0,240,0,0],[8256,16,0,0],[4112,16,0,0],[2052,16,0,0],[0,31,0,0],[0,2064,516,1]],[[0,8224,8224,8224],[0,16416,128,0],[0,224,0,0],[16512,32,0,0],[8224,32,0,0],[4104,32,0,0],[0,63,0,0],[0,4128,1032,258]],[[0,16448,16448,16448],[0,32832,0,0],[0,192,0,0],[32768,64,0,0],[16448,64,0,0],[8208,64,0,0],[0,127,0,0],[0,8256,2064,516]],[[0,32896,32896,32896],[0,128,0,0],[0,128,0,0],[0,128,0,0],[32896,128,0,0],[16416,128,0,0],[0,255,0,0],[0,16512,4128,1032]],[[0,256,257,257],[0,256,1026,4104],[0,65280,0,0],[1032,258,0,0],[257,257,0,0],[0,256,0,0],[0,256,0,0],[0,256,0,0]],[[0,512,514,514],[0,512,2052,8208],[0,65024,0,0],[2064,516,0,0],[514,514,0,0],[0,513,0,0],[0,768,0,0],[0,512,1,0]],[[0,1024,1028,1028],[0,1024,4104,16416],[0,64512,0,0],[4128,1032,0,0],[1028,1028,0,0],[256,1026,0,0],[0,1792,0,0],[0,1024,258,0]],[[0,2048,2056,2056],[0,2048,8208,32832],[0,63488,0,0],[8256,2064,0,0],[2056,2056,0,0],[513,2052,0,0],[0,3840,0,0],[0,2048,516,1]],[[0,4096,4112,4112],[0,4096,16416,128],[0,61440,0,0],[16512,4128,0,0],[4112,4112,0,0],[1026,4104,0,0],[0,7936,0,0],[0,4096,1032,258]],[[0,8192,8224,8224],[0,8192,32832,0],[0,57344,0,0],[32768,8256,0,0],[8224,8224,0,0],[2052,8208,0,0],[0,16128,0,0],[0,8192,2064,516]],[[0,16384,16448,16448],[0,16384,128,0],[0,49152,0,0],[0,16512,0,0],[16448,16448,0,0],[4104,16416,0,0],[0,32512,0,0],[0,16384,4128,1032]],[[0,32768,32896,32896],[0,32768,0,0],[0,32768,0,0],[0,32768,0,0],[32896,32896,0,0],[8208,32832,0,0],[0,65280,0,0],[0,32768,8256,2064]],[[0,0,257,257],[0,0,513,2052],[0,0,255,0],[2064,516,1,0],[257,257,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],[[0,0,514,514],[0,0,1026,4104],[0,0,254,0],[4128,1032,2,0],[514,514,2,0],[0,256,2,0],[0,0,3,0],[0,0,258,0]],[[0,0,1028,1028],[0,0,2052,8208],[0,0,252,0],[8256,2064,4,0],[1028,1028,4,0],[0,513,4,0],[0,0,7,0],[0,0,516,1]],[[0,0,2056,2056],[0,0,4104,16416],[0,0,248,0],[16512,4128,8,0],[2056,2056,8,0],[256,1026,8,0],[0,0,15,0],[0,0,1032,258]],[[0,0,4112,4112],[0,0,8208,32832],[0,0,240,0],[32768,8256,16,0],[4112,4112,16,0],[513,2052,16,0],[0,0,31,0],[0,0,2064,516]],[[0,0,8224,8224],[0,0,16416,128],[0,0,224,0],[0,16512,32,0],[8224,8224,32,0],[1026,4104,32,0],[0,0,63,0],[0,0,4128,1032]],[[0,0,16448,16448],[0,0,32832,0],[0,0,192,0],[0,32768,64,0],[16448,16448,64,0],[2052,8208,64,0],[0,0,127,0],[0,0,8256,2064]],[[0,0,32896,32896],[0,0,128,0],[0,0,128,0],[0,0,128,0],[32896,32896,128,0],[4104,16416,128,0],[0,0,255,0],[0,0,16512,4128]],[[0,0,256,257],[0,0,256,1026],[0,0,65280,0],[4128,1032,258,0],[257,257,257,0],[0,0,256,0],[0,0,256,0],[0,0,256,0]],[[0,0,512,514],[0,0,512,2052],[0,0,65024,0],[8256,2064,516,0],[514,514,514,0],[0,0,513,0],[0,0,768,0],[0,0,512,1]],[[0,0,1024,1028],[0,0,1024,4104],[0,0,64512,0],[16512,4128,1032,0],[1028,1028,1028,0],[0,256,1026,0],[0,0,1792,0],[0,0,1024,258]],[[0,0,2048,2056],[0,0,2048,8208],[0,0,63488,0],[32768,8256,2064,0],[2056,2056,2056,0],[0,513,2052,0],[0,0,3840,0],[0,0,2048,516]],[[0,0,4096,4112],[0,0,4096,16416],[0,0,61440,0],[0,16512,4128,0],[4112,4112,4112,0],[256,1026,4104,0],[0,0,7936,0],[0,0,4096,1032]],[[0,0,8192,8224],[0,0,8192,32832],[0,0,57344,0],[0,32768,8256,0],[8224,8224,8224,0],[513,2052,8208,0],[0,0,16128,0],[0,0,8192,2064]],[[0,0,16384,16448],[0,0,16384,128],[0,0,49152,0],[0,0,16512,0],[16448,16448,16448,0],[1026,4104,16416,0],[0,0,32512,0],[0,0,16384,4128]],[[0,0,32768,32896],[0,0,32768,0],[0,0,32768,0],[0,0,32768,0],[32896,32896,32896,0],[2052,8208,32832,0],[0,0,65280,0],[0,0,32768,8256]],[[0,0,0,257],[0,0,0,513],[0,0,0,255],[8256,2064,516,1],[257,257,257,1],[0,0,0,1],[0,0,0,1],[0,0,0,1]],[[0,0,0,514],[0,0,0,1026],[0,0,0,254],[16512,4128,1032,2],[514,514,514,2],[0,0,256,2],[0,0,0,3],[0,0,0,258]],[[0,0,0,1028],[0,0,0,2052],[0,0,0,252],[32768,8256,2064,4],[1028,1028,1028,4],[0,0,513,4],[0,0,0,7],[0,0,0,516]],[[0,0,0,2056],[0,0,0,4104],[0,0,0,248],[0,16512,4128,8],[2056,2056,2056,8],[0,256,1026,8],[0,0,0,15],[0,0,0,1032]],[[0,0,0,4112],[0,0,0,8208],[0,0,0,240],[0,32768,8256,16],[4112,4112,4112,16],[0,513,2052,16],[0,0,0,31],[0,0,0,2064]],[[0,0,0,8224],[0,0,0,16416],[0,0,0,224],[0,0,16512,32],[8224,8224,8224,32],[256,1026,4104,32],[0,0,0,63],[0,0,0,4128]],[[0,0,0,16448],[0,0,0,32832],[0,0,0,192],[0,0,32768,64],[16448,16448,16448,64],[513,2052,8208,64],[0,0,0,127],[0,0,0,8256]],[[0,0,0,32896],[0,0,0,128],[0,0,0,128],[0,0,0,128],[32896,32896,32896,128],[1026,4104,16416,128],[0,0,0,255],[0,0,0,16512]],[[0,0,0,256],[0,0,0,256],[0,0,0,65280],[16512,4128,1032,258],[257,257,257,257],[0,0,0,256],[0,0,0,256],[0,0,0,256]],[[0,0,0,512],[0,0,0,512],[0,0,0,65024],[32768,8256,2064,516],[514,514,514,514],[0,0,0,513],[0,0,0,768],[0,0,0,512]],[[0,0,0,1024],[0,0,0,1024],[0,0,0,64512],[0,16512,4128,1032],[1028,1028,1028,1028],[0,0,256,1026],[0,0,0,1792],[0,0,0,1024]],[[0,0,0,2048],[0,0,0,2048],[0,0,0,63488],[0,32768,8256,2064],[2056,2056,2056,2056],[0,0,513,2052],[0,0,0,3840],[0,0,0,2048]],[[0,0,0,4096],[0,0,0,4096],[0,0,0,61440],[0,0,16512,4128],[4112,4112,4112,4112],[0,256,1026,4104],[0,0,0,7936],[0,0,0,4096]],[[0,0,0,8192],[0,0,0,8192],[0,0,0,57344],[0,0,32768,8256],[8224,8224,8224,8224],[0,513,2052,8208],[0,0,0,16128],[0,0,0,8192]],[[0,0,0,16384],[0,0,0,16384],[0,0,0,49152],[0,0,0,16512],[16448,16448,16448,16448],[256,1026,4104,16416],[0,0,0,32512],[0,0,0,16384]],[[0,0,0,32768],[0,0,0,32768],[0,0,0,32768],[0,0,0,32768],[32896,32896,32896,32896],[513,2052,8208,32832],[0,0,0,65280],[0,0,0,32768]]];
 CMGBitBoard.SQUARE_VALUES = [
