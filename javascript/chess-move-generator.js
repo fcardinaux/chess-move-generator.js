@@ -345,6 +345,13 @@ CMGPosition = (function() {
     return defaultValue;
   };
 
+  CMGPosition.squareNumberToString = function(squareNumber) {
+    var colValue, rowValue;
+    rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN);
+    colValue = squareNumber % CMGPosition.ROW_SPAN;
+    return String.fromCharCode(colValue + 97) + String.fromCharCode(rowValue + 49);
+  };
+
   function CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber) {
     var piece, squareId, _ref;
     this.pieces = pieces;
@@ -695,7 +702,7 @@ CMGPosition = (function() {
             * move after which the king is under chess
             * castling moves that cross a threatened square
     */
-    var crossedSquare, crossedSquareAttackBitBoard, crossedSquareBitBoard, kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
+    var crossedSquare, crossedSquareAttackBitBoard, crossedSquareBitBoard, delta, kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
     if (move.fromPiece.type === 'p' && (Math.abs(move.toSquare - move.fromSquare) % 8) !== 0 && move.takenPiece === false) {
       return CMGPosition.PSEUDO_ONLY;
     }
@@ -705,12 +712,15 @@ CMGPosition = (function() {
     if (!CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
       return CMGPosition.PSEUDO_ONLY;
     }
-    if (move.fromPiece === 'k' && Math.abs(move.toSquare - move.fromSquare) === 2) {
-      crossedSquare = move.fromSquare + (move.toSquare - move.fromSquare) / 2;
-      crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare);
-      crossedSquareAttackBitBoard = CMGBitBoard.binAnd(crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove);
-      if (!CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
-        return CMGPosition.PSEUDO_ONLY;
+    if (move.fromPiece.type === 'k') {
+      delta = parseInt(move.toSquare) - parseInt(move.fromSquare);
+      if (Math.abs(delta) === 2) {
+        crossedSquare = parseInt(move.fromSquare) + delta / 2;
+        crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare);
+        crossedSquareAttackBitBoard = CMGBitBoard.binAnd(crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove);
+        if (!CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
+          return CMGPosition.PSEUDO_ONLY;
+        }
       }
     }
     return true;
@@ -755,14 +765,7 @@ CMGPosition = (function() {
 
   CMGPosition.prototype._enPassantSquareToString = function(squareNumber) {
     if (squareNumber === false) return '-';
-    return this._squareToString(squareNumber);
-  };
-
-  CMGPosition.prototype._squareToString = function(squareNumber) {
-    var colValue, rowValue;
-    rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN);
-    colValue = squareNumber % CMGPosition.ROW_SPAN;
-    return String.fromCharCode(colValue + 97) + String.fromCharCode(rowValue + 49);
+    return CMGPosition.squareNumberToString(squareNumber);
   };
 
   CMGPosition.prototype._getPieceOnSquare = function(squareKey) {
@@ -812,6 +815,14 @@ CMGPosition = (function() {
 
 CMGMove = (function() {
 
+  CMGMove.fromStringAndPosition = function(moveString, oldPosition) {
+    var fromSquare, promotion, toString;
+    fromSquare = moveString.substr(0, 2);
+    toString = moveString.substr(2, 2);
+    promotion = false;
+    if (moveString.length === 5) return promotion = moveString.substr(4);
+  };
+
   function CMGMove(fromSquare, fromPiece, toSquare, toPiece, newPosition, castling, takenPiece, takenOnSquare) {
     this.fromSquare = fromSquare;
     this.fromPiece = fromPiece;
@@ -838,7 +849,12 @@ CMGMove = (function() {
   }
 
   CMGMove.prototype.toString = function() {
-    return CMGPosition._squareToString(fromSquare) + CMGPosition._squareToString(toSquare);
+    var out;
+    out = CMGPosition.squareNumberToString(this.fromSquare) + CMGPosition.squareNumberToString(this.toSquare);
+    if (this.fromPiece.type === 'p' && this.toPiece.type !== 'p') {
+      out += this.toPiece.type.toUpperCase();
+    }
+    return out;
   };
 
   CMGMove.prototype.setNewPositionObject = function(newPosition) {

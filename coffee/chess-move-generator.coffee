@@ -300,6 +300,12 @@ class CMGPosition
             when "w" then return "b"
         defaultValue
 
+    @squareNumberToString: (squareNumber) ->
+        rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN)
+        colValue = squareNumber % CMGPosition.ROW_SPAN
+
+        String.fromCharCode(colValue + 97) + String.fromCharCode(rowValue + 49) # 97 is 'a', 49 is '1'
+
     # -------------------------------------------------------------------------
     # Constructor
 
@@ -621,12 +627,14 @@ class CMGPosition
             return CMGPosition.PSEUDO_ONLY
 
         # Test if castling crosses a square that is under attack
-        if move.fromPiece is 'k' and Math.abs(move.toSquare - move.fromSquare) is 2
-            crossedSquare = move.fromSquare + (move.toSquare - move.fromSquare) / 2
-            crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare)
-            crossedSquareAttackBitBoard = CMGBitBoard.binAnd( crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove )
-            if not CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
-                return CMGPosition.PSEUDO_ONLY
+        if move.fromPiece.type is 'k'
+            delta = parseInt(move.toSquare) - parseInt(move.fromSquare)
+            if Math.abs(delta) is 2
+                crossedSquare = parseInt(move.fromSquare) + delta / 2
+                crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare)
+                crossedSquareAttackBitBoard = CMGBitBoard.binAnd( crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove )
+                if not CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
+                    return CMGPosition.PSEUDO_ONLY
 
         # promotion = false
         # if move.toPiece isnt move.fromPiece
@@ -678,13 +686,7 @@ class CMGPosition
         if squareNumber is false
             return '-'
 
-        return @_squareToString(squareNumber)
-
-    _squareToString: (squareNumber) ->
-        rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN)
-        colValue = squareNumber % CMGPosition.ROW_SPAN
-
-        String.fromCharCode(colValue + 97) + String.fromCharCode(rowValue + 49) # 97 is 'a', 49 is '1'
+        return CMGPosition.squareNumberToString(squareNumber)
 
     _getPieceOnSquare: (squareKey) ->
         CMGPosition._getPieceOnSquare(@pieces, squareKey)
@@ -719,6 +721,14 @@ class CMGPosition
 # =============================================================================
 
 class CMGMove
+    @fromStringAndPosition: (moveString, oldPosition) ->
+        fromSquare = moveString.substr(0, 2)
+        toString = moveString.substr(2, 2)
+        promotion = false
+        if moveString.length is 5
+            promotion = moveString.substr(4)
+        # todo continue or remove this function
+
     constructor: (@fromSquare, @fromPiece, @toSquare, @toPiece, @newPosition, @castling = false, @takenPiece = false, @takenOnSquare = false) ->
         ###
         Constructor
@@ -737,7 +747,10 @@ class CMGMove
         @takenOnSquare  = CMGUtil.toString(@takenOnSquare)
 
     toString:   () ->
-        CMGPosition._squareToString(fromSquare) + CMGPosition._squareToString(toSquare)
+        out = CMGPosition.squareNumberToString(@fromSquare) + CMGPosition.squareNumberToString(@toSquare)
+        if @fromPiece.type is 'p' and @toPiece.type isnt 'p'
+            out += @toPiece.type.toUpperCase()
+        out
 
     setNewPositionObject: (@newPosition) ->
 

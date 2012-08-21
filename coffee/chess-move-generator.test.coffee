@@ -16,7 +16,27 @@ bitBoardClass = chessMoveGenerator.bitBoard
 DEPTH = 2
 
 LOG = (x) ->
-    console.log(x)
+    # console.log(x)
+
+getInitialCounterArray = (maxDepth) ->
+    counters = []
+    for iDepth in [0..(maxDepth-1)]
+        counters.push(0)
+    counters
+
+testDepth = (positionObj, counters, currentDepth, maxDepth) ->
+    moves = positionObj.allPossibleMoves()
+
+    counters[currentDepth] += moves.length
+
+    currentDepth++
+    if currentDepth >= maxDepth
+        return true
+
+    for move in moves
+        testDepth(move.newPosition, counters, currentDepth, maxDepth)
+
+    return true
 
 # http://stackoverflow.com/a/498995
 trimString = (str) ->
@@ -142,7 +162,37 @@ module.nonexports =
 
 module.exports =
     'test CMGPosition#allPossibleMoves': (beforeExit, assert) ->
-        testData = [
+        testVector = [
+            [
+                "r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1",
+                [
+                    # King moves
+                    "r2k3r/8/8/8/8/8/8/R4RK1 w - - 2 2",
+                    "r6r/3k4/8/8/8/8/8/R4RK1 w - - 2 2",
+                    "r6r/4k3/8/8/8/8/8/R4RK1 w - - 2 2",
+                    "2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2",
+                    # Rook moves
+                    "1r2k2r/8/8/8/8/8/8/R4RK1 w k - 2 2",
+                    "2r1k2r/8/8/8/8/8/8/R4RK1 w k - 2 2",
+                    "3rk2r/8/8/8/8/8/8/R4RK1 w k - 2 2",
+                    "4k2r/r7/8/8/8/8/8/R4RK1 w k - 2 2",
+                    "4k2r/8/r7/8/8/8/8/R4RK1 w k - 2 2",
+                    "4k2r/8/8/r7/8/8/8/R4RK1 w k - 2 2",
+                    "4k2r/8/8/8/r7/8/8/R4RK1 w k - 2 2",
+                    "4k2r/8/8/8/8/r7/8/R4RK1 w k - 2 2",
+                    "4k2r/8/8/8/8/8/r7/R4RK1 w k - 2 2",
+                    "4k2r/8/8/8/8/8/8/r4RK1 w k - 0 2",
+                    "r3k1r1/8/8/8/8/8/8/R4RK1 w q - 2 2",
+                    "r3kr2/8/8/8/8/8/8/R4RK1 w q - 2 2",
+                    "r3k3/7r/8/8/8/8/8/R4RK1 w q - 2 2",
+                    "r3k3/8/7r/8/8/8/8/R4RK1 w q - 2 2",
+                    "r3k3/8/8/7r/8/8/8/R4RK1 w q - 2 2",
+                    "r3k3/8/8/8/7r/8/8/R4RK1 w q - 2 2",
+                    "r3k3/8/8/8/8/7r/8/R4RK1 w q - 2 2",
+                    "r3k3/8/8/8/8/8/7r/R4RK1 w q - 2 2",
+                    "r3k3/8/8/8/8/8/8/R4RKr w q - 2 2",
+                ]
+            ],
             [
                 "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
                 [
@@ -333,7 +383,7 @@ module.exports =
             ]
         ]
 
-        for [startPositionString, expectedEndPositionStrings] in testData
+        for [startPositionString, expectedEndPositionStrings] in testVector
             positionObj = positionClass.fromString(startPositionString)
 
             LOG('Start = ' + startPositionString)
@@ -358,57 +408,62 @@ module.exports =
         # todo     console.log(stdout)
         # todo exec('ls', fct)
 
-        testData = [
+        testVector = [
             [
                 "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
                 2,
-                [
-                    {"e1g1", 23},
-                    {"e1c1", 23},
-                    {"e1f1", 26},
-                    {"e1d1", 26},
-                    {"e1e2", 26},
-                    {"e1f2", 26},
-                    {"e1d2", 26},
-                    {"a1b1", 26},
-                    {"a1c1", 25},
-                    {"a1d1", 23},
-                    {"a1a2", 25},
-                    {"a1a3", 24},
-                    {"a1a4", 23},
-                    {"a1a5", 22},
-                    {"a1a6", 21},
-                    {"a1a7", 17},
-                    {"a1a8", 3},
-                    {"h1g1", 25},
-                    {"h1f1", 23},
-                    {"h1h2", 25},
-                    {"h1h3", 24},
-                    {"h1h4", 23},
-                    {"h1h5", 22},
-                    {"h1h6", 21},
-                    {"h1h7", 17},
-                    {"h1h8", 3},
-                ]
+                {
+                    "e1g1": 23,
+                    "e1c1": 23,
+                    "e1f1": 26,
+                    "e1d1": 26,
+                    "e1e2": 26,
+                    "e1f2": 26,
+                    "e1d2": 26,
+                    "a1b1": 26,
+                    "a1c1": 25,
+                    "a1d1": 23,
+                    "a1a2": 25,
+                    "a1a3": 24,
+                    "a1a4": 23,
+                    "a1a5": 22,
+                    "a1a6": 21,
+                    "a1a7": 17,
+                    "a1a8": 3,
+                    "h1g1": 25,
+                    "h1f1": 23,
+                    "h1h2": 25,
+                    "h1h3": 24,
+                    "h1h4": 23,
+                    "h1h5": 22,
+                    "h1h6": 21,
+                    "h1h7": 17,
+                    "h1h8": 3
+                }
             ]
         ]
 
+        for [positionString, depth, expectedData] in testVector
+            position = positionClass.fromString(positionString)
+
+            calculatedMoves = {}
+            for calculatedMoveObj in position.allPossibleMoves()
+                calculatedMoveString = calculatedMoveObj.toString()
+                assert.isDefined(expectedData[calculatedMoveString], "Unexpected move #{calculatedMoveString} from position #{positionString}")
+                calculatedMoves[calculatedMoveString] = calculatedMoveObj
+
+            for expectedMove, expectedQuantity of expectedData
+                assert.isDefined(calculatedMoves[expectedMove], "Uncalculated move #{expectedMove} from position #{positionString}")
+                newDepth = depth - 1 # remove 1 from depth because the first move is already performed at this level
+                counters = getInitialCounterArray(newDepth)
+                testDepth(calculatedMoves[expectedMove].newPosition, counters, 0, newDepth)
+                calculatedQuantity = counters[newDepth - 1]
+                assert.eql(calculatedQuantity, expectedQuantity, "Unexpected quantity for move #{expectedMove} from position #{positionString}: #{calculatedQuantity}")
+
+
+
     'test perftsuite.txt': (beforeExit, assert) ->
         fs = require('fs');
-
-        testDepth = (positionObj, counters, currentDepth, maxDepth) ->
-            moves = positionObj.allPossibleMoves()
-
-            counters[currentDepth] += moves.length
-
-            currentDepth++
-            if currentDepth >= maxDepth
-                return true
-
-            for move in moves
-                testDepth(move.newPosition, counters, currentDepth, maxDepth)
-
-            return true
 
         testLine = (line) ->
             line = trimString line
@@ -427,9 +482,7 @@ module.exports =
                 maxDepth = elem.length
 
             # Initialize the counters
-            counters = []
-            for iDepth in [0..(maxDepth-1)]
-                counters.push(0)
+            counters = getInitialCounterArray(maxDepth)
 
             # Count
             testDepth(positionObj, counters, 0, maxDepth)
