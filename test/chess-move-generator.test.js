@@ -9,15 +9,15 @@ About Expresso: http://visionmedia.github.com/expresso/
 */
 var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
 
-DO_ELEMENTARY_TESTS = false;
+DO_ELEMENTARY_TESTS = true;
 
 DO_POSSIBLE_MOVE_TEST = true;
 
-DO_DIVISION_TEST = true;
+DO_DIVISION_TEST = false;
 
-DO_PERFTSUITE = false;
+DO_PERFTSUITE = true;
 
-DEPTH = 4;
+DEPTH = 3;
 
 LOG = function(x) {};
 
@@ -197,53 +197,6 @@ module.exports = {
     if (!DO_DIVISION_TEST) return;
     testVector = [
       [
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 1 1", 1, {
-          "e8g8": 1,
-          "e8c8": 1,
-          "e8f8": 1,
-          "e8d8": 1,
-          "c7c6": 1,
-          "c7c5": 1,
-          "d7d6": 1,
-          "e6d5": 1,
-          "g6g5": 1,
-          "b4b3": 1,
-          "b4a3": 1,
-          "b4c3": 1,
-          "h3g2": 1,
-          "a8b8": 1,
-          "a8c8": 1,
-          "a8d8": 1,
-          "h8g8": 1,
-          "h8f8": 1,
-          "h8h7": 1,
-          "h8h6": 1,
-          "h8h5": 1,
-          "h8h4": 1,
-          "e7d6": 1,
-          "e7c5": 1,
-          "e7f8": 1,
-          "e7d8": 1,
-          "g7h6": 1,
-          "g7f8": 1,
-          "a6b7": 1,
-          "a6c8": 1,
-          "a6b5": 1,
-          "a6c4": 1,
-          "a6d3": 1,
-          "a6e2": 1,
-          "b6a4": 1,
-          "b6c8": 1,
-          "b6d5": 1,
-          "b6c4": 1,
-          "f6e4": 1,
-          "f6g8": 1,
-          "f6d5": 1,
-          "f6h7": 1,
-          "f6h5": 1,
-          "f6g4": 1
-        }
-      ], [
         "r3k2r/p1p1qNb1/bn1ppnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 0 1", 1, {
           "e8g8": 1,
           "e8f8": 1,
@@ -289,6 +242,53 @@ module.exports = {
           "f6h7": 1,
           "f6h5": 1,
           "f6d7": 1,
+          "f6g4": 1
+        }
+      ], [
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 1 1", 1, {
+          "e8g8": 1,
+          "e8c8": 1,
+          "e8f8": 1,
+          "e8d8": 1,
+          "c7c6": 1,
+          "c7c5": 1,
+          "d7d6": 1,
+          "e6d5": 1,
+          "g6g5": 1,
+          "b4b3": 1,
+          "b4a3": 1,
+          "b4c3": 1,
+          "h3g2": 1,
+          "a8b8": 1,
+          "a8c8": 1,
+          "a8d8": 1,
+          "h8g8": 1,
+          "h8f8": 1,
+          "h8h7": 1,
+          "h8h6": 1,
+          "h8h5": 1,
+          "h8h4": 1,
+          "e7d6": 1,
+          "e7c5": 1,
+          "e7f8": 1,
+          "e7d8": 1,
+          "g7h6": 1,
+          "g7f8": 1,
+          "a6b7": 1,
+          "a6c8": 1,
+          "a6b5": 1,
+          "a6c4": 1,
+          "a6d3": 1,
+          "a6e2": 1,
+          "b6a4": 1,
+          "b6c8": 1,
+          "b6d5": 1,
+          "b6c4": 1,
+          "f6e4": 1,
+          "f6g8": 1,
+          "f6d5": 1,
+          "f6h7": 1,
+          "f6h5": 1,
           "f6g4": 1
         }
       ], [
@@ -538,6 +538,7 @@ module.exports = {
         for (expectedMove in expectedData) {
           expectedQuantity = expectedData[expectedMove];
           assert.isDefined(calculatedMoves[expectedMove], "Uncalculated move " + expectedMove + " from position " + positionString);
+          if (depth === 1) continue;
           newDepth = depth - 1;
           counters = getInitialCounterArray(newDepth);
           testDepth(calculatedMoves[expectedMove].newPosition, counters, 0, newDepth);

@@ -111,6 +111,9 @@ class CMGBitBoard
                     squareKeys.push(qid * 16 + key)
         return squareKeys
 
+    @clone: ( bb ) ->
+        [bb[0], bb[1], bb[2], bb[3]]
+
 # =============================================================================
 
 class CMGPosition
@@ -557,14 +560,14 @@ class CMGPosition
                     @lazy['pks']['q'] = false
                 else
                     if @lazy['pks']['k']
-                        rightOfKingBitBoard = kingSquareBitBoard
+                        rightOfKingBitBoard = CMGBitBoard.clone( kingSquareBitBoard )
                         rightOfKingBitBoard[0] = rightOfKingBitBoard[0] << 1
                         rightOfKingBitBoard[3] = rightOfKingBitBoard[3] << 1
                         rightOfKingAttackBitBoard = CMGBitBoard.binAnd( rightOfKingBitBoard, threats )
                         @lazy['pks']['k'] = false if not CMGBitBoard.isZero( rightOfKingAttackBitBoard )
 
                     if @lazy['pks']['q']
-                        leftOfKingBitBoard = kingSquareBitBoard
+                        leftOfKingBitBoard = CMGBitBoard.clone( kingSquareBitBoard )
                         leftOfKingBitBoard[0] = leftOfKingBitBoard[0] >> 1
                         leftOfKingBitBoard[3] = leftOfKingBitBoard[3] >> 1
                         leftOfKingAttackBitBoard = CMGBitBoard.binAnd( leftOfKingBitBoard, threats )
@@ -579,8 +582,10 @@ class CMGPosition
             invPosition.lazy = {} # Force the pseudo-move bitboard to be recalculated
             invPosition.turn = @opponentColorCode()
             invPosition.enPassantSquare = false
+            invPosition.allowedCastling = false # Avoid unnecessary evaluations
 
             @lazy['ptpbm'] = invPosition._allPseudoMoveBitBoard()
+
         return @lazy['ptpbm']
 
     _bitBoardOfPseudoMovesFromSquare: (squareKey, movedPiece, stopAtColor = false, stopAfterColor = false) ->
