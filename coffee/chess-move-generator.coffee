@@ -10,7 +10,9 @@ class clg
     @opened: false
 
     @open: (val = true) ->
+        prev = @opened
         @opened = val
+        return prev
 
     @close: () ->
         @opened = false
@@ -101,25 +103,6 @@ class CMGBitBoard
     @valueOfSquare: (square) ->
         @SQUARE_VALUES[square]
 
-    @binLeftShift: (bb, n) ->
-        res = []
-
-        # Left shift (<< n) is limited to n < 32, so eliminate lost quadrants first
-        while n >= 16
-            # bb[3] is lost
-            bb[3] = bb[2]
-            bb[2] = bb[1]
-            bb[1] = bb[0]
-            bb[0] = 0
-            n -= 16
-
-        carry = 0
-        for qKey in [0..3]
-            shiftedBb = (bb[qKey] << n) + carry
-            res[qKey] = shiftedBb & 0xffff
-            carry = shiftedBb >> 16
-        return res
-
     @bitBoardToSquareKeyArray: ( bitBoard ) ->
         squareKeys = []
         for quadrant, qid in bitBoard
@@ -150,6 +133,8 @@ class CMGPosition
     @CASTLING_CODE_WHITE_QUEEN:  4
     @CASTLING_CODE_BLACK_KING:   2
     @CASTLING_CODE_BLACK_QUEEN:  1
+    @CASTLING_CODE_ANY_KING:    @CASTLING_CODE_WHITE_KING  | @CASTLING_CODE_BLACK_KING
+    @CASTLING_CODE_ANY_QUEEN:   @CASTLING_CODE_WHITE_QUEEN | @CASTLING_CODE_BLACK_QUEEN
 
     # -------------------------------------------------------------------------
     # Move bitboards
@@ -331,6 +316,9 @@ class CMGPosition
         @bitBoards = {}
         @_generateBitBoards()
 
+        # May be used, e.g., for castling evaluation:
+        @lazy = {}
+
     # -------------------------------------------------------------------------
     # Public functions of object (comparable to non static methods)
 
@@ -368,46 +356,8 @@ class CMGPosition
         if piece.color isnt @turn
             return 0x0
 
-        # First, seach all "ordinary" pseudo moves
-        pseudoMoveBitBoard = @_bitBoardOfPseudoMovesFromSquare(squareKey, piece, @turn, @opponentColorCode())
-
-        # Second, convert the move bitboard into a move array, and execute promotion if required
-        pseudoMoves = []
-        targets = CMGBitBoard.bitBoardToSquareKeyArray( pseudoMoveBitBoard )
-        for target in targets
-            toPiece = piece
-
-            takenPiece = @_getPieceOnSquare(target)
-            takenOnSquare = false
-            if takenPiece
-                takenOnSquare = target
-            else if piece.type is 'p' and parseInt(target) is @enPassantSquare
-                # Still need to verify if taken 'en passant':
-                switch @enPassantSquare - parseInt(squareKey)
-                    when -9 then takenOnSquare = squareKey - 1
-                    when -7 then takenOnSquare = squareKey + 1
-                    when  7 then takenOnSquare = squareKey - 1
-                    when  9 then takenOnSquare = squareKey + 1
-                if takenOnSquare
-                    takenPiece = @_getPieceOnSquare(takenOnSquare)
-
-            if piece.type is 'p' and (target >= CMGPosition.TOP_LEFT_CORNER or target <= CMGPosition.BOTTOM_RIGHT_CORNER)
-                # A promotion
-                for newPieceType in ['q', 'r', 'n', 'b']
-                    newPiece = new CMGPiece(piece.color, newPieceType)
-                    move = new CMGMove(squareKey, piece, target, newPiece, null, false, takenPiece, takenOnSquare)
-                    move.setNewPositionObject( @_getNewPositionObjectAfterMove(move) )
-                    pseudoMoves.push(move)
-            else
-                castling = false
-                if piece.type is 'k' and Math.abs(target - squareKey) is 2
-                    if target > squareKey
-                        castling = 'k'
-                    else
-                        castling = 'q'
-                move = new CMGMove(squareKey, piece, target, toPiece, null, castling, takenPiece, takenOnSquare)
-                move.setNewPositionObject( @_getNewPositionObjectAfterMove(move) )
-                pseudoMoves.push(move)
+        # Search all pseudo moves from the given square
+        pseudoMoves = @_allPseudoMovesFromSquare(squareKey)
 
         # Finally, eliminate invalid moves:
         out = []
@@ -417,6 +367,35 @@ class CMGPosition
                 out.push(pseudoMove)
 
         return out
+
+    allPossibleMoves: () ->
+        result = []
+
+        for square, piece of @pieces
+            if piece.color isnt @turn
+                continue
+            moves = @allPossibleMovesFromSquare(square)
+            if moves.length > 0
+                result = result.concat(moves)
+
+        return result
+
+    isDraw: () ->
+        ###
+        Is the position a draw
+        @return boolean
+        ###
+        return 'todo'
+
+    getWinnerColorCode: () ->
+        ###
+        Get the winner color code
+        @return (false|'b'|'w')
+        ###
+        return 'todo'
+
+    # -------------------------------------------------------------------------
+    # Private functions of object (comparable to non static methods)
 
     _getNewPositionObjectAfterMove: (move) ->
         pieces = CMGUtil.cloneObject( @pieces )
@@ -492,42 +471,117 @@ class CMGPosition
 
         new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber)
 
-    allPossibleMoves: () ->
-        result = []
+    _allPseudoMoves: () ->
+        # These lazy objects are useful in case of chained move generation, typically during the "performance test" (perftsuite.txt)
+        if not @lazy.hasOwnProperty('pmv')
+            @lazy['pmv'] = [] # Pseudo-move array
+            @lazy['pmvs'] = {} # Pseudo-move arrays, one element for each of player's piece
+            @lazy['pmvbb'] = CMGBitBoard.EMPTY_BOARD # Pseudo-move bitboard
 
-        for square, piece of @pieces
-            if piece.color isnt @turn
-                continue
-            moves = @allPossibleMovesFromSquare(square)
-            if moves.length > 0
-                result = result.concat(moves)
+            opponent = @opponentColorCode()
+            for squareKey, piece of @piecesOfColor[@turn]
+                @lazy['pmvs'][squareKey] = []
 
-        return result
+                # First, seach all "ordinary" pseudo moves
+                pseudoMoveBitBoard = @_bitBoardOfPseudoMovesFromSquare(squareKey, piece, @turn, opponent)
 
-    isDraw: () ->
-        ###
-        Is the position a draw
-        @return boolean
-        ###
-        return 'todo'
+                @lazy['pmvbb'] = CMGBitBoard.binOr( @lazy['pmvbb'], pseudoMoveBitBoard )
 
-    getWinnerColorCode: () ->
-        ###
-        Get the winner color code
-        @return (false|'b'|'w')
-        ###
-        return 'todo'
+                # Second, convert the move bitboard into a move array, and execute promotion if required
+                targets = CMGBitBoard.bitBoardToSquareKeyArray( pseudoMoveBitBoard )
+                for target in targets
+                    toPiece = piece
 
-    # -------------------------------------------------------------------------
-    # Private functions of object (comparable to non static methods)
+                    takenPiece = @_getPieceOnSquare(target)
+                    takenOnSquare = false
+                    if takenPiece
+                        takenOnSquare = target
+                    else if piece.type is 'p' and parseInt(target) is @enPassantSquare
+                        # Still need to verify if taken 'en passant':
+                        switch @enPassantSquare - parseInt(squareKey)
+                            when -9 then takenOnSquare = squareKey - 1
+                            when -7 then takenOnSquare = squareKey + 1
+                            when  7 then takenOnSquare = squareKey - 1
+                            when  9 then takenOnSquare = squareKey + 1
+                        if takenOnSquare
+                            takenPiece = @_getPieceOnSquare(takenOnSquare)
 
-    _bitBoardOfPseudoMoves: (stopAtColor = false, stopAfterColor = false) ->
-        out = CMGBitBoard.EMPTY_BOARD
+                    if piece.type is 'p' and (target >= CMGPosition.TOP_LEFT_CORNER or target <= CMGPosition.BOTTOM_RIGHT_CORNER)
+                        # A promotion
+                        for newPieceType in ['q', 'r', 'n', 'b']
+                            newPiece = new CMGPiece(piece.color, newPieceType)
+                            move = new CMGMove(squareKey, piece, target, newPiece, null, false, takenPiece, takenOnSquare)
+                            move.setNewPositionObject( @_getNewPositionObjectAfterMove(move) )
+                            @lazy['pmvs'][squareKey].push(move)
+                    else
+                        castling = false
+                        if piece.type is 'k' and Math.abs(target - squareKey) is 2
+                            if target > squareKey
+                                castling = 'k'
+                            else
+                                castling = 'q'
+                        move = new CMGMove(squareKey, piece, target, toPiece, null, castling, takenPiece, takenOnSquare)
+                        move.setNewPositionObject( @_getNewPositionObjectAfterMove(move) )
+                        @lazy['pmvs'][squareKey].push(move)
 
-        for pieceSquare, piece of @piecesOfColor[@turn]
-            out = CMGBitBoard.binOr( out, @_bitBoardOfPseudoMovesFromSquare(pieceSquare, piece, stopAtColor, stopAfterColor) )
+        return @lazy['pmv']
 
-        return out
+    _allPseudoMovesFromSquare: (squareKey) ->
+        if not @lazy.hasOwnProperty('pmvs')
+            @_allPseudoMoves()
+        if not @lazy['pmvs'].hasOwnProperty(squareKey)
+            return []
+        return @lazy['pmvs'][squareKey]
+
+    _allPseudoMoveBitBoard: () ->
+        if not @lazy.hasOwnProperty('pmvbb')
+            @_allPseudoMoves()
+        return @lazy['pmvbb']
+
+    _castlingPossibleOnSide: (castlingSide) ->
+        if not @lazy.hasOwnProperty('pks')
+
+            @lazy['pks'] =
+                'k': 0 < (@allowedCastling & CMGPosition.CASTLING_CODE_ANY_KING)
+                'q': 0 < (@allowedCastling & CMGPosition.CASTLING_CODE_ANY_QUEEN)
+
+            if @lazy['pks']['k'] or @lazy['pks']['q']
+
+                threats = @_pseudoThreatsOnPlayerBeforeMove()
+
+                kingSquareBitBoard = @bitBoards.allPiecesOfColorAndType[@turn]['k']
+                kingSquareAttackBitBoard = CMGBitBoard.binAnd( kingSquareBitBoard, threats )
+
+                if not CMGBitBoard.isZero( kingSquareAttackBitBoard )
+                    @lazy['pks']['k'] = false
+                    @lazy['pks']['q'] = false
+                else
+                    if @lazy['pks']['k']
+                        rightOfKingBitBoard = kingSquareBitBoard
+                        rightOfKingBitBoard[0] = rightOfKingBitBoard[0] << 1
+                        rightOfKingBitBoard[3] = rightOfKingBitBoard[3] << 1
+                        rightOfKingAttackBitBoard = CMGBitBoard.binAnd( rightOfKingBitBoard, threats )
+                        @lazy['pks']['k'] = false if not CMGBitBoard.isZero( rightOfKingAttackBitBoard )
+
+                    if @lazy['pks']['q']
+                        leftOfKingBitBoard = kingSquareBitBoard
+                        leftOfKingBitBoard[0] = leftOfKingBitBoard[0] >> 1
+                        leftOfKingBitBoard[3] = leftOfKingBitBoard[3] >> 1
+                        leftOfKingAttackBitBoard = CMGBitBoard.binAnd( leftOfKingBitBoard, threats )
+                        @lazy['pks']['q'] = false if not CMGBitBoard.isZero( leftOfKingAttackBitBoard )
+
+        return @lazy['pks'][castlingSide]
+
+    _pseudoThreatsOnPlayerBeforeMove: () ->
+        if not @lazy.hasOwnProperty('ptpbm')
+
+            invPosition = CMGUtil.cloneObject(this)
+            invPosition.lazy = {} # Force the pseudo-move bitboard to be recalculated
+            invPosition.turn = @opponentColorCode()
+            invPosition.enPassantSquare = false
+
+            @lazy['ptpbm'] = invPosition._allPseudoMoveBitBoard()
+        return @lazy['ptpbm']
 
     _bitBoardOfPseudoMovesFromSquare: (squareKey, movedPiece, stopAtColor = false, stopAfterColor = false) ->
         out = CMGBitBoard.EMPTY_BOARD
@@ -629,28 +683,23 @@ class CMGPosition
             # A taking move with a pawn, but no piece has been taken
             return CMGPosition.PSEUDO_ONLY
 
-        pseudoThreatsOnPlayerAfterMove = move.newPosition._bitBoardOfPseudoMoves(@opponentColorCode(), @turn)
 
         # Test if king is under attack
+        pseudoThreatsOnPlayerAfterMove = move.newPosition._allPseudoMoveBitBoard()
         kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[@turn]['k']
         kingAttackBitBoard = CMGBitBoard.binAnd( kingBitBoard, pseudoThreatsOnPlayerAfterMove )
         if not CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
             return CMGPosition.PSEUDO_ONLY
 
-        # Test if castling crosses a square that is under attack
+        # Test if castling is allowed: the king may not be under chess before move, and it may not cross a field that is under chess
         if move.fromPiece.type is 'k'
             delta = parseInt(move.toSquare) - parseInt(move.fromSquare)
             if Math.abs(delta) is 2
-                crossedSquare = parseInt(move.fromSquare) + delta / 2
-                crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare)
-                crossedSquareAttackBitBoard = CMGBitBoard.binAnd( crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove )
-                if not CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)
+                castlingSide = 'k'
+                if delta < 0
+                    castlingSide = 'q'
+                if not @_castlingPossibleOnSide(castlingSide)
                     return CMGPosition.PSEUDO_ONLY
-
-        # promotion = false
-        # if move.toPiece isnt move.fromPiece
-        #     promotion = move.toPiece
-        # @isValidMove(move.fromSquare, move.toSquare, promotion)
 
         return true
 

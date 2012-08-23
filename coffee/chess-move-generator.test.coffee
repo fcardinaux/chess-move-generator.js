@@ -8,15 +8,25 @@ Licence: see README.md
 About Expresso: http://visionmedia.github.com/expresso/
 ###
 
+# =============================================================================
+
+# Set the performance test depth here
+DO_ELEMENTARY_TESTS = false
+DO_POSSIBLE_MOVE_TEST = true
+DO_DIVISION_TEST = true
+DO_PERFTSUITE = false
+DEPTH = 4
+
+LOG = (x) ->
+    # console.log(x)
+
+# =============================================================================
+
 chessMoveGenerator = require('../javascript/chess-move-generator')
 positionClass = chessMoveGenerator.position
 bitBoardClass = chessMoveGenerator.bitBoard
 
-# Set the performance test depth here
-DEPTH = 3
-
-LOG = (x) ->
-    # console.log(x)
+# =============================================================================
 
 getInitialCounterArray = (maxDepth) ->
     counters = []
@@ -63,8 +73,12 @@ compareArrays = (arr1, arr2) ->
 
     return [missingInArr1, missingInArr2]
 
-module.nonexports =
+module.exports =
     'test CMGBitBoard#valueOfSquare': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
         assert.eql([   0x0, 0x8000,    0x0,    0x0], bitBoardClass.valueOfSquare(31))
 
         assert.eql([   0x1,    0x0,    0x0,    0x0], bitBoardClass.valueOfSquare(0))
@@ -78,6 +92,10 @@ module.nonexports =
         assert.eql([   0x0,    0x0,    0x0, 0x8000], bitBoardClass.valueOfSquare(63))
 
     'test CMGPosition#fromString': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
         positionStrings = [
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
             "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0",
@@ -103,6 +121,10 @@ module.nonexports =
             assert.eql(positionString, newPositionString)
 
     'test CMGPosition#_allowedCastlingValueToString': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
         assert.eql("KQkq",  positionClass._allowedCastlingValueToString(15))
         assert.eql("KQk",   positionClass._allowedCastlingValueToString(14))
         assert.eql("KQq",   positionClass._allowedCastlingValueToString(13))
@@ -121,6 +143,10 @@ module.nonexports =
         assert.eql("-",     positionClass._allowedCastlingValueToString( 0))
 
     'test CMGPosition#_allowedCastlingStringToValue': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
         assert.eql(15,      positionClass._allowedCastlingStringToValue("KQkq"))
         assert.eql(14,      positionClass._allowedCastlingStringToValue("KQk"))
         assert.eql(13,      positionClass._allowedCastlingStringToValue("KQq"))
@@ -139,6 +165,10 @@ module.nonexports =
         assert.eql( 0,      positionClass._allowedCastlingStringToValue("-"))
 
     'test CMGPosition#playerColorCode': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
         testData = [
             ['w', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
             ['b', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"],
@@ -150,6 +180,10 @@ module.nonexports =
             assert.eql(colorCode, positionObj.playerColorCode())
 
     'test CMGPosition#opponentColorCode': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
         testData = [
             ['b', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
             ['w', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"],
@@ -160,12 +194,15 @@ module.nonexports =
             positionObj = positionClass.fromString(positionString)
             assert.eql(colorCode, positionObj.opponentColorCode())
 
-module.exports =
     'test CMGPosition#allPossibleMoves': (beforeExit, assert) ->
+
+        if not DO_POSSIBLE_MOVE_TEST
+            return
+
         testVector = [
             [
                 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 1 1",
-              # /r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/p1N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2/
+              # /2kr3r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2/
                 [
                     "r4rk1/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2",
                     "2kr3r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2",
@@ -211,6 +248,18 @@ module.exports =
                     "r3k2r/p1ppqpbn/bn2p1p1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
                     "r3k2r/p1ppqpb1/bn2p1p1/3PN2n/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
                     "r3k2r/p1ppqpb1/bn2p1p1/3PN3/Pp2P1n1/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2"
+                ]
+            ],
+            [
+                "r3k2r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 b kq - 1 2",
+                [
+                    "r4k1r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w - - 2 3",
+                    "r2k3r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w - - 2 3",
+                    "r3k2r/p3qpb1/bnpppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 0 3",
+                    "r3k2r/p1pq1pb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3",
+                    "r3k2r/p1p1qpb1/1n1ppnp1/1b1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 0 3",
+                    "r3k2r/p1pnqpb1/b2ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3",
+                    "r3k2r/p1pnqpb1/bn1pp1p1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3"
                 ]
             ],
             [
@@ -453,12 +502,272 @@ module.exports =
 
     'test division': (beforeExit, assert) ->
 
+        if not DO_DIVISION_TEST
+            return
+
         # todo exec = require('child_process').exec
         # todo fct = (error, stdout, stderr) ->
         # todo     console.log(stdout)
         # todo exec('ls', fct)
 
         testVector = [
+            [
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 1 1",
+                1,
+                {
+                    "e8g8": 1,
+                    "e8c8": 1,
+                    "e8f8": 1,
+                    "e8d8": 1,
+                    "c7c6": 1,
+                    "c7c5": 1,
+                    "d7d6": 1,
+                    "e6d5": 1,
+                    "g6g5": 1,
+                    "b4b3": 1,
+                    "b4a3": 1,
+                    "b4c3": 1,
+                    "h3g2": 1,
+                    "a8b8": 1,
+                    "a8c8": 1,
+                    "a8d8": 1,
+                    "h8g8": 1,
+                    "h8f8": 1,
+                    "h8h7": 1,
+                    "h8h6": 1,
+                    "h8h5": 1,
+                    "h8h4": 1,
+                    "e7d6": 1,
+                    "e7c5": 1,
+                    "e7f8": 1,
+                    "e7d8": 1,
+                    "g7h6": 1,
+                    "g7f8": 1,
+                    "a6b7": 1,
+                    "a6c8": 1,
+                    "a6b5": 1,
+                    "a6c4": 1,
+                    "a6d3": 1,
+                    "a6e2": 1,
+                    "b6a4": 1,
+                    "b6c8": 1,
+                    "b6d5": 1,
+                    "b6c4": 1,
+                    "f6e4": 1,
+                    "f6g8": 1,
+                    "f6d5": 1,
+                    "f6h7": 1,
+                    "f6h5": 1,
+                    "f6g4": 1
+                }
+            ],
+            [
+                "r3k2r/p1p1qNb1/bn1ppnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 0 1",
+                1,
+                {
+                    "e8g8": 1,
+                    "e8f8": 1,
+                    "e8d7": 1,
+                    "e8f7": 1,
+                    "c7c6": 1,
+                    "c7c5": 1,
+                    "e6e5": 1,
+                    "e6d5": 1,
+                    "g6g5": 1,
+                    "b4b3": 1,
+                    "b4c3": 1,
+                    "h3g2": 1,
+                    "a8b8": 1,
+                    "a8c8": 1,
+                    "a8d8": 1,
+                    "h8g8": 1,
+                    "h8f8": 1,
+                    "h8h7": 1,
+                    "h8h6": 1,
+                    "h8h5": 1,
+                    "h8h4": 1,
+                    "e7f7": 1,
+                    "e7d7": 1,
+                    "e7f8": 1,
+                    "e7d8": 1,
+                    "g7h6": 1,
+                    "g7f8": 1,
+                    "a6b7": 1,
+                    "a6c8": 1,
+                    "a6b5": 1,
+                    "a6c4": 1,
+                    "a6d3": 1,
+                    "a6e2": 1,
+                    "b6a4": 1,
+                    "b6c8": 1,
+                    "b6d7": 1,
+                    "b6d5": 1,
+                    "b6c4": 1,
+                    "f6e4": 1,
+                    "f6g8": 1,
+                    "f6d5": 1,
+                    "f6h7": 1,
+                    "f6h5": 1,
+                    "f6d7": 1,
+                    "f6g4": 1
+                }
+            ],
+            [
+                "r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 w kq - 0 2",
+                2,
+                {
+                    "g1h1": 44,
+                    "d5e6": 46,
+                    "a2a3": 45,
+                    "a2a4": 45,
+                    "b2b3": 43,
+                    "g2g3": 43,
+                    "g2g4": 43,
+                    "g2h3": 44,
+                    "e5d3": 44,
+                    "e5f7": 45,
+                    "e5c4": 43,
+                    "e5g6": 43,
+                    "e5g4": 45,
+                    "e5c6": 41,
+                    "e5d7": 43,
+                    "c3b1": 43,
+                    "c3a4": 43,
+                    "c3d1": 43,
+                    "c3b5": 40,
+                    "f3g3": 44,
+                    "f3h3": 44,
+                    "f3e3": 44,
+                    "f3d3": 43,
+                    "f3g4": 44,
+                    "f3h5": 44,
+                    "f3f4": 44,
+                    "f3f5": 46,
+                    "f3f6": 39,
+                    "d2c1": 44,
+                    "d2e3": 44,
+                    "d2f4": 44,
+                    "d2g5": 43,
+                    "d2h6": 42,
+                    "d2e1": 44,
+                    "e2d1": 45,
+                    "e2d3": 43,
+                    "e2c4": 42,
+                    "e2b5": 7,
+                    "e2a6": 37,
+                    "a1b1": 44,
+                    "a1c1": 44,
+                    "a1d1": 44,
+                    "a1e1": 44,
+                    "f1e1": 44,
+                    "f1d1": 44,
+                    "f1c1": 44,
+                    "f1b1": 44
+                }
+            ],
+            [
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 1 1",
+                3,
+                {
+                    "e8g8": 1899,
+                    "e8c8": 1962,
+                    "e8f8": 1872,
+                    "e8d8": 1913,
+                    "c7c6": 2080,
+                    "c7c5": 1984,
+                    "d7d6": 2005,
+                    "e6d5": 2086,
+                    "g6g5": 1995,
+                    "b4b3": 2174,
+                    "b4c3": 2123,
+                    "h3g2": 2248,
+                    "a8b8": 2089,
+                    "a8c8": 1946,
+                    "a8d8": 1948,
+                    "h8g8": 1802,
+                    "h8f8": 1708,
+                    "h8h7": 1897,
+                    "h8h6": 1896,
+                    "h8h5": 2040,
+                    "h8h4": 2078,
+                    "e7d6": 2109,
+                    "e7c5": 2412,
+                    "e7f8": 1889,
+                    "e7d8": 1894,
+                    "g7h6": 2072,
+                    "g7f8": 1849,
+                    "a6b7": 2056,
+                    "a6c8": 1770,
+                    "a6b5": 2091,
+                    "a6c4": 2049,
+                    "a6d3": 2038,
+                    "a6e2": 2057,
+                    "b6a4": 1989,
+                    "b6c8": 1753,
+                    "b6d5": 1937,
+                    "b6c4": 2003,
+                    "f6e4": 2566,
+                    "f6g8": 2049,
+                    "f6d5": 2185,
+                    "f6h7": 2048,
+                    "f6h5": 2142,
+                    "f6g4": 2272
+                }
+            ],
+            [
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+                4,
+                {
+                    "e1g1": 86975,
+                    "e1c1": 79803,
+                    "e1f1": 77887,
+                    "e1d1": 79989,
+                    "d5d6": 79551,
+                    "d5e6": 97464,
+                    "a2a3": 94405,
+                    "a2a4": 90978,
+                    "b2b3": 81066,
+                    "g2g3": 77468,
+                    "g2g4": 75677,
+                    "g2h3": 82759,
+                    "e5d3": 77431,
+                    "e5f7": 88799,
+                    "e5c4": 77752,
+                    "e5g6": 83866,
+                    "e5g4": 79912,
+                    "e5c6": 83885,
+                    "e5d7": 93913,
+                    "c3b1": 84773,
+                    "c3a4": 91447,
+                    "c3d1": 84782,
+                    "c3b5": 81498,
+                    "f3g3": 94461,
+                    "f3h3": 98524,
+                    "f3e3": 92505,
+                    "f3d3": 83727,
+                    "f3g4": 92037,
+                    "f3h5": 95034,
+                    "f3f4": 90488,
+                    "f3f5": 104992,
+                    "f3f6": 77838,
+                    "d2c1": 83037,
+                    "d2e3": 90274,
+                    "d2f4": 84869,
+                    "d2g5": 87951,
+                    "d2h6": 82323,
+                    "e2d1": 74963,
+                    "e2f1": 88728,
+                    "e2d3": 85119,
+                    "e2c4": 84835,
+                    "e2b5": 79739,
+                    "e2a6": 69334,
+                    "a1b1": 83348,
+                    "a1c1": 83263,
+                    "a1d1": 79695,
+                    "h1g1": 84876,
+                    "h1f1": 81563
+                }
+            ],
             [
                 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
                 2,
@@ -562,11 +871,15 @@ module.exports =
                 counters = getInitialCounterArray(newDepth)
                 testDepth(calculatedMoves[expectedMove].newPosition, counters, 0, newDepth)
                 calculatedQuantity = counters[newDepth - 1]
-                assert.eql(calculatedQuantity, expectedQuantity, "Unexpected quantity for move #{expectedMove} from position #{positionString}: #{calculatedQuantity}")
+                assert.eql(calculatedQuantity, expectedQuantity, "Unexpected quantity for move #{expectedMove} from position #{positionString}: is #{calculatedQuantity}, expected #{expectedQuantity}")
 
 
 
     'test perftsuite.txt': (beforeExit, assert) ->
+
+        if not DO_PERFTSUITE
+            return
+
         fs = require('fs');
 
         testLine = (line) ->

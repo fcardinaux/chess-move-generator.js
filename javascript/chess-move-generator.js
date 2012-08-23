@@ -14,8 +14,11 @@ clg = (function() {
   clg.opened = false;
 
   clg.open = function(val) {
+    var prev;
     if (val == null) val = true;
-    return this.opened = val;
+    prev = this.opened;
+    this.opened = val;
+    return prev;
   };
 
   clg.close = function() {
@@ -102,25 +105,6 @@ CMGBitBoard = (function() {
     return this.SQUARE_VALUES[square];
   };
 
-  CMGBitBoard.binLeftShift = function(bb, n) {
-    var carry, qKey, res, shiftedBb;
-    res = [];
-    while (n >= 16) {
-      bb[3] = bb[2];
-      bb[2] = bb[1];
-      bb[1] = bb[0];
-      bb[0] = 0;
-      n -= 16;
-    }
-    carry = 0;
-    for (qKey = 0; qKey <= 3; qKey++) {
-      shiftedBb = (bb[qKey] << n) + carry;
-      res[qKey] = shiftedBb & 0xffff;
-      carry = shiftedBb >> 16;
-    }
-    return res;
-  };
-
   CMGBitBoard.bitBoardToSquareKeyArray = function(bitBoard) {
     var key, qid, quadrant, squareKeys, _len;
     squareKeys = [];
@@ -160,6 +144,10 @@ CMGPosition = (function() {
   CMGPosition.CASTLING_CODE_BLACK_KING = 2;
 
   CMGPosition.CASTLING_CODE_BLACK_QUEEN = 1;
+
+  CMGPosition.CASTLING_CODE_ANY_KING = CMGPosition.CASTLING_CODE_WHITE_KING | CMGPosition.CASTLING_CODE_BLACK_KING;
+
+  CMGPosition.CASTLING_CODE_ANY_QUEEN = CMGPosition.CASTLING_CODE_WHITE_QUEEN | CMGPosition.CASTLING_CODE_BLACK_QUEEN;
 
   CMGPosition.CASTLING_WHITE_KING = {
     move: [64, 0, 0, 0],
@@ -382,6 +370,7 @@ CMGPosition = (function() {
     }
     this.bitBoards = {};
     this._generateBitBoards();
+    this.lazy = {};
   }
 
   CMGPosition.prototype.playerColorCode = function() {
@@ -413,66 +402,45 @@ CMGPosition = (function() {
   };
 
   CMGPosition.prototype.allPossibleMovesFromSquare = function(squareKey) {
-    var castling, move, newPiece, newPieceType, out, piece, pseudoMove, pseudoMoveBitBoard, pseudoMoves, takenOnSquare, takenPiece, target, targets, toPiece, _i, _j, _k, _len, _len2, _len3, _ref;
+    var out, piece, pseudoMove, pseudoMoves, _i, _len;
     squareKey = CMGUtil.toString(squareKey);
     piece = this._getPieceOnSquare(squareKey);
     if (!piece) return 0x0;
     if (piece.color !== this.turn) return 0x0;
-    pseudoMoveBitBoard = this._bitBoardOfPseudoMovesFromSquare(squareKey, piece, this.turn, this.opponentColorCode());
-    pseudoMoves = [];
-    targets = CMGBitBoard.bitBoardToSquareKeyArray(pseudoMoveBitBoard);
-    for (_i = 0, _len = targets.length; _i < _len; _i++) {
-      target = targets[_i];
-      toPiece = piece;
-      takenPiece = this._getPieceOnSquare(target);
-      takenOnSquare = false;
-      if (takenPiece) {
-        takenOnSquare = target;
-      } else if (piece.type === 'p' && parseInt(target) === this.enPassantSquare) {
-        switch (this.enPassantSquare - parseInt(squareKey)) {
-          case -9:
-            takenOnSquare = squareKey - 1;
-            break;
-          case -7:
-            takenOnSquare = squareKey + 1;
-            break;
-          case 7:
-            takenOnSquare = squareKey - 1;
-            break;
-          case 9:
-            takenOnSquare = squareKey + 1;
-        }
-        if (takenOnSquare) takenPiece = this._getPieceOnSquare(takenOnSquare);
-      }
-      if (piece.type === 'p' && (target >= CMGPosition.TOP_LEFT_CORNER || target <= CMGPosition.BOTTOM_RIGHT_CORNER)) {
-        _ref = ['q', 'r', 'n', 'b'];
-        for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
-          newPieceType = _ref[_j];
-          newPiece = new CMGPiece(piece.color, newPieceType);
-          move = new CMGMove(squareKey, piece, target, newPiece, null, false, takenPiece, takenOnSquare);
-          move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
-          pseudoMoves.push(move);
-        }
-      } else {
-        castling = false;
-        if (piece.type === 'k' && Math.abs(target - squareKey) === 2) {
-          if (target > squareKey) {
-            castling = 'k';
-          } else {
-            castling = 'q';
-          }
-        }
-        move = new CMGMove(squareKey, piece, target, toPiece, null, castling, takenPiece, takenOnSquare);
-        move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
-        pseudoMoves.push(move);
-      }
-    }
+    pseudoMoves = this._allPseudoMovesFromSquare(squareKey);
     out = [];
-    for (_k = 0, _len3 = pseudoMoves.length; _k < _len3; _k++) {
-      pseudoMove = pseudoMoves[_k];
+    for (_i = 0, _len = pseudoMoves.length; _i < _len; _i++) {
+      pseudoMove = pseudoMoves[_i];
       if (this._isValidMoveObject(pseudoMove)) out.push(pseudoMove);
     }
     return out;
+  };
+
+  CMGPosition.prototype.allPossibleMoves = function() {
+    var moves, piece, result, square, _ref;
+    result = [];
+    _ref = this.pieces;
+    for (square in _ref) {
+      piece = _ref[square];
+      if (piece.color !== this.turn) continue;
+      moves = this.allPossibleMovesFromSquare(square);
+      if (moves.length > 0) result = result.concat(moves);
+    }
+    return result;
+  };
+
+  CMGPosition.prototype.isDraw = function() {
+    /*
+            Is the position a draw
+            @return boolean
+    */    return 'todo';
+  };
+
+  CMGPosition.prototype.getWinnerColorCode = function() {
+    /*
+            Get the winner color code
+            @return (false|'b'|'w')
+    */    return 'todo';
   };
 
   CMGPosition.prototype._getNewPositionObjectAfterMove = function(move) {
@@ -570,44 +538,131 @@ CMGPosition = (function() {
     return new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber);
   };
 
-  CMGPosition.prototype.allPossibleMoves = function() {
-    var moves, piece, result, square, _ref;
-    result = [];
-    _ref = this.pieces;
-    for (square in _ref) {
-      piece = _ref[square];
-      if (piece.color !== this.turn) continue;
-      moves = this.allPossibleMovesFromSquare(square);
-      if (moves.length > 0) result = result.concat(moves);
+  CMGPosition.prototype._allPseudoMoves = function() {
+    var castling, move, newPiece, newPieceType, opponent, piece, pseudoMoveBitBoard, squareKey, takenOnSquare, takenPiece, target, targets, toPiece, _i, _j, _len, _len2, _ref, _ref2;
+    if (!this.lazy.hasOwnProperty('pmv')) {
+      this.lazy['pmv'] = [];
+      this.lazy['pmvs'] = {};
+      this.lazy['pmvbb'] = CMGBitBoard.EMPTY_BOARD;
+      opponent = this.opponentColorCode();
+      _ref = this.piecesOfColor[this.turn];
+      for (squareKey in _ref) {
+        piece = _ref[squareKey];
+        this.lazy['pmvs'][squareKey] = [];
+        pseudoMoveBitBoard = this._bitBoardOfPseudoMovesFromSquare(squareKey, piece, this.turn, opponent);
+        this.lazy['pmvbb'] = CMGBitBoard.binOr(this.lazy['pmvbb'], pseudoMoveBitBoard);
+        targets = CMGBitBoard.bitBoardToSquareKeyArray(pseudoMoveBitBoard);
+        for (_i = 0, _len = targets.length; _i < _len; _i++) {
+          target = targets[_i];
+          toPiece = piece;
+          takenPiece = this._getPieceOnSquare(target);
+          takenOnSquare = false;
+          if (takenPiece) {
+            takenOnSquare = target;
+          } else if (piece.type === 'p' && parseInt(target) === this.enPassantSquare) {
+            switch (this.enPassantSquare - parseInt(squareKey)) {
+              case -9:
+                takenOnSquare = squareKey - 1;
+                break;
+              case -7:
+                takenOnSquare = squareKey + 1;
+                break;
+              case 7:
+                takenOnSquare = squareKey - 1;
+                break;
+              case 9:
+                takenOnSquare = squareKey + 1;
+            }
+            if (takenOnSquare) takenPiece = this._getPieceOnSquare(takenOnSquare);
+          }
+          if (piece.type === 'p' && (target >= CMGPosition.TOP_LEFT_CORNER || target <= CMGPosition.BOTTOM_RIGHT_CORNER)) {
+            _ref2 = ['q', 'r', 'n', 'b'];
+            for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+              newPieceType = _ref2[_j];
+              newPiece = new CMGPiece(piece.color, newPieceType);
+              move = new CMGMove(squareKey, piece, target, newPiece, null, false, takenPiece, takenOnSquare);
+              move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
+              this.lazy['pmvs'][squareKey].push(move);
+            }
+          } else {
+            castling = false;
+            if (piece.type === 'k' && Math.abs(target - squareKey) === 2) {
+              if (target > squareKey) {
+                castling = 'k';
+              } else {
+                castling = 'q';
+              }
+            }
+            move = new CMGMove(squareKey, piece, target, toPiece, null, castling, takenPiece, takenOnSquare);
+            move.setNewPositionObject(this._getNewPositionObjectAfterMove(move));
+            this.lazy['pmvs'][squareKey].push(move);
+          }
+        }
+      }
     }
-    return result;
+    return this.lazy['pmv'];
   };
 
-  CMGPosition.prototype.isDraw = function() {
-    /*
-            Is the position a draw
-            @return boolean
-    */    return 'todo';
+  CMGPosition.prototype._allPseudoMovesFromSquare = function(squareKey) {
+    if (!this.lazy.hasOwnProperty('pmvs')) this._allPseudoMoves();
+    if (!this.lazy['pmvs'].hasOwnProperty(squareKey)) return [];
+    return this.lazy['pmvs'][squareKey];
   };
 
-  CMGPosition.prototype.getWinnerColorCode = function() {
-    /*
-            Get the winner color code
-            @return (false|'b'|'w')
-    */    return 'todo';
+  CMGPosition.prototype._allPseudoMoveBitBoard = function() {
+    if (!this.lazy.hasOwnProperty('pmvbb')) this._allPseudoMoves();
+    return this.lazy['pmvbb'];
   };
 
-  CMGPosition.prototype._bitBoardOfPseudoMoves = function(stopAtColor, stopAfterColor) {
-    var out, piece, pieceSquare, _ref;
-    if (stopAtColor == null) stopAtColor = false;
-    if (stopAfterColor == null) stopAfterColor = false;
-    out = CMGBitBoard.EMPTY_BOARD;
-    _ref = this.piecesOfColor[this.turn];
-    for (pieceSquare in _ref) {
-      piece = _ref[pieceSquare];
-      out = CMGBitBoard.binOr(out, this._bitBoardOfPseudoMovesFromSquare(pieceSquare, piece, stopAtColor, stopAfterColor));
+  CMGPosition.prototype._castlingPossibleOnSide = function(castlingSide) {
+    var kingSquareAttackBitBoard, kingSquareBitBoard, leftOfKingAttackBitBoard, leftOfKingBitBoard, rightOfKingAttackBitBoard, rightOfKingBitBoard, threats;
+    if (!this.lazy.hasOwnProperty('pks')) {
+      this.lazy['pks'] = {
+        'k': 0 < (this.allowedCastling & CMGPosition.CASTLING_CODE_ANY_KING),
+        'q': 0 < (this.allowedCastling & CMGPosition.CASTLING_CODE_ANY_QUEEN)
+      };
+      if (this.lazy['pks']['k'] || this.lazy['pks']['q']) {
+        threats = this._pseudoThreatsOnPlayerBeforeMove();
+        kingSquareBitBoard = this.bitBoards.allPiecesOfColorAndType[this.turn]['k'];
+        kingSquareAttackBitBoard = CMGBitBoard.binAnd(kingSquareBitBoard, threats);
+        if (!CMGBitBoard.isZero(kingSquareAttackBitBoard)) {
+          this.lazy['pks']['k'] = false;
+          this.lazy['pks']['q'] = false;
+        } else {
+          if (this.lazy['pks']['k']) {
+            rightOfKingBitBoard = kingSquareBitBoard;
+            rightOfKingBitBoard[0] = rightOfKingBitBoard[0] << 1;
+            rightOfKingBitBoard[3] = rightOfKingBitBoard[3] << 1;
+            rightOfKingAttackBitBoard = CMGBitBoard.binAnd(rightOfKingBitBoard, threats);
+            if (!CMGBitBoard.isZero(rightOfKingAttackBitBoard)) {
+              this.lazy['pks']['k'] = false;
+            }
+          }
+          if (this.lazy['pks']['q']) {
+            leftOfKingBitBoard = kingSquareBitBoard;
+            leftOfKingBitBoard[0] = leftOfKingBitBoard[0] >> 1;
+            leftOfKingBitBoard[3] = leftOfKingBitBoard[3] >> 1;
+            leftOfKingAttackBitBoard = CMGBitBoard.binAnd(leftOfKingBitBoard, threats);
+            if (!CMGBitBoard.isZero(leftOfKingAttackBitBoard)) {
+              this.lazy['pks']['q'] = false;
+            }
+          }
+        }
+      }
     }
-    return out;
+    return this.lazy['pks'][castlingSide];
+  };
+
+  CMGPosition.prototype._pseudoThreatsOnPlayerBeforeMove = function() {
+    var invPosition;
+    if (!this.lazy.hasOwnProperty('ptpbm')) {
+      invPosition = CMGUtil.cloneObject(this);
+      invPosition.lazy = {};
+      invPosition.turn = this.opponentColorCode();
+      invPosition.enPassantSquare = false;
+      this.lazy['ptpbm'] = invPosition._allPseudoMoveBitBoard();
+    }
+    return this.lazy['ptpbm'];
   };
 
   CMGPosition.prototype._bitBoardOfPseudoMovesFromSquare = function(squareKey, movedPiece, stopAtColor, stopAfterColor) {
@@ -719,11 +774,11 @@ CMGPosition = (function() {
             * move after which the king is under chess
             * castling moves that cross a threatened square
     */
-    var crossedSquare, crossedSquareAttackBitBoard, crossedSquareBitBoard, delta, kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
+    var castlingSide, delta, kingAttackBitBoard, kingBitBoard, pseudoThreatsOnPlayerAfterMove;
     if (move.fromPiece.type === 'p' && (Math.abs(move.toSquare - move.fromSquare) % 8) !== 0 && move.takenPiece === false) {
       return CMGPosition.PSEUDO_ONLY;
     }
-    pseudoThreatsOnPlayerAfterMove = move.newPosition._bitBoardOfPseudoMoves(this.opponentColorCode(), this.turn);
+    pseudoThreatsOnPlayerAfterMove = move.newPosition._allPseudoMoveBitBoard();
     kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[this.turn]['k'];
     kingAttackBitBoard = CMGBitBoard.binAnd(kingBitBoard, pseudoThreatsOnPlayerAfterMove);
     if (!CMGBitBoard.binEqual(kingAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
@@ -732,10 +787,9 @@ CMGPosition = (function() {
     if (move.fromPiece.type === 'k') {
       delta = parseInt(move.toSquare) - parseInt(move.fromSquare);
       if (Math.abs(delta) === 2) {
-        crossedSquare = parseInt(move.fromSquare) + delta / 2;
-        crossedSquareBitBoard = CMGBitBoard.valueOfSquare(crossedSquare);
-        crossedSquareAttackBitBoard = CMGBitBoard.binAnd(crossedSquareBitBoard, pseudoThreatsOnPlayerAfterMove);
-        if (!CMGBitBoard.binEqual(crossedSquareAttackBitBoard, CMGBitBoard.EMPTY_BOARD)) {
+        castlingSide = 'k';
+        if (delta < 0) castlingSide = 'q';
+        if (!this._castlingPossibleOnSide(castlingSide)) {
           return CMGPosition.PSEUDO_ONLY;
         }
       }
