@@ -377,6 +377,14 @@ CMGPosition = (function() {
     this.lazy = {};
   }
 
+  CMGPosition.prototype.clone = function(withLazyObject) {
+    var out;
+    if (withLazyObject == null) withLazyObject = true;
+    out = new CMGPosition(this.pieces, this.turn, this.allowedCastling, this.enPassantSquare, this.halfMoveClock, this.moveNumber);
+    if (!withLazyObject) out.lazy = {};
+    return out;
+  };
+
   CMGPosition.prototype.playerColorCode = function() {
     return this.turn;
   };
@@ -660,8 +668,7 @@ CMGPosition = (function() {
   CMGPosition.prototype._pseudoThreatsOnPlayerBeforeMove = function() {
     var invPosition;
     if (!this.lazy.hasOwnProperty('ptpbm')) {
-      invPosition = CMGUtil.cloneObject(this);
-      invPosition.lazy = {};
+      invPosition = this.clone(false);
       invPosition.turn = this.opponentColorCode();
       invPosition.enPassantSquare = false;
       invPosition.allowedCastling = false;

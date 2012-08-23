@@ -6,13 +6,30 @@ Chess Move Generator: Unit tests
 Licence: see README.md
 
 About Expresso: http://visionmedia.github.com/expresso/
+
+Profiling:
+
+* Using [nodetime](http://nodetime.com/):
+
+        sudo npm install nodetime
+
+* Using [dtrace and flamegraph](http://blog.nodejs.org/2012/04/25/profiling-node-js/):
+
+        sudo dtrace -n 'profile-97/execname == "node" && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
+        sudo dtrace -n 'profile-97/pid == 1704 && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
+        stackvis dtrace flamegraph-svg < stacks.out > stacks.svg
 ###
 
 # =============================================================================
 
+# Profiling with nodetime:
+# todo remove completely: require('nodetime').profile()
+
+# =============================================================================
+
 # Set the performance test depth here
-DO_ELEMENTARY_TESTS = true
-DO_POSSIBLE_MOVE_TEST = true
+DO_ELEMENTARY_TESTS = false
+DO_POSSIBLE_MOVE_TEST = false
 DO_DIVISION_TEST = false
 DO_PERFTSUITE = true
 DEPTH = 3
@@ -44,7 +61,16 @@ testDepth = (positionObj, counters, currentDepth, maxDepth) ->
         return true
 
     for move in moves
-        testDepth(move.newPosition, counters, currentDepth, maxDepth)
+        pos = move.newPosition.clone()
+        testDepth(pos, counters, currentDepth, maxDepth)
+        move = null
+        delete move
+        pos = null
+        delete pos
+
+    # Avoid too many allocations
+    moves = null
+    delete moves
 
     return true
 

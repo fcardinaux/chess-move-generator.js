@@ -6,12 +6,24 @@ Chess Move Generator: Unit tests
 Licence: see README.md
 
 About Expresso: http://visionmedia.github.com/expresso/
+
+Profiling:
+
+* Using [nodetime](http://nodetime.com/):
+
+        sudo npm install nodetime
+
+* Using [dtrace and flamegraph](http://blog.nodejs.org/2012/04/25/profiling-node-js/):
+
+        sudo dtrace -n 'profile-97/execname == "node" && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
+        sudo dtrace -n 'profile-97/pid == 1204 && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
+        stackvis dtrace flamegraph-svg < stacks.out > stacks.svg
 */
 var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
 
-DO_ELEMENTARY_TESTS = true;
+DO_ELEMENTARY_TESTS = false;
 
-DO_POSSIBLE_MOVE_TEST = true;
+DO_POSSIBLE_MOVE_TEST = false;
 
 DO_DIVISION_TEST = false;
 
@@ -37,15 +49,22 @@ getInitialCounterArray = function(maxDepth) {
 };
 
 testDepth = function(positionObj, counters, currentDepth, maxDepth) {
-  var move, moves, _i, _len;
+  var move, moves, pos, _i, _len;
   moves = positionObj.allPossibleMoves();
   counters[currentDepth] += moves.length;
   currentDepth++;
   if (currentDepth >= maxDepth) return true;
   for (_i = 0, _len = moves.length; _i < _len; _i++) {
     move = moves[_i];
-    testDepth(move.newPosition, counters, currentDepth, maxDepth);
+    pos = move.newPosition.clone();
+    testDepth(pos, counters, currentDepth, maxDepth);
+    move = null;
+    delete move;
+    pos = null;
+    delete pos;
   }
+  moves = null;
+  delete moves;
   return true;
 };
 
