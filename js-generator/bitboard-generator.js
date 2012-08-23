@@ -87,8 +87,6 @@ Numbering of each bitboard quadrant (hexadecimal here):
 "Keys [of objects] can only be strings, and numeric keys such as those used in Arrays are coerced and stored as strings"
 (http://stackoverflow.com/a/6066954)
 
-
-
 Todos
 =====
 
@@ -134,7 +132,7 @@ pawnTakeBitBoardStringArray = {
 shadowBitBoardStringArrays = [['000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['000000000000001', '000000000000010', '000000000000100', '000000000001000', '000000000010000', '000000000100000', '000000001000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000011111111', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000001000000', '000000000100000', '000000000010000', '000000000001000', '000000000000100', '000000000000010', '000000000000001'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000', '000000010000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000010000000', '000000100000000', '000001000000000', '000010000000000', '000100000000000', '001000000000000', '010000000000000', '100000000000000'], ['000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '111111110000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000'], ['100000000000000', '010000000000000', '001000000000000', '000100000000000', '000010000000000', '000001000000000', '000000100000000', '000000010000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000', '000000000000000']];
 
 module.exports.generateJavascriptLines = function(bitBoardDataPrefix, positionDataPrefix, headerLine) {
-  var lines, moves, shadows, square;
+  var lines, moves, sep, shadows, square;
   if (headerLine == null) headerLine = '';
   lines = [];
   if (headerLine !== '') lines.push("// " + headerLine);
@@ -152,17 +150,23 @@ module.exports.generateJavascriptLines = function(bitBoardDataPrefix, positionDa
     b: loadPawnNonTakingMoves('b'),
     w: loadPawnNonTakingMoves('w')
   };
-  lines.push("" + positionDataPrefix + "PAWN_NON_TAKING_MOVES = {\n    b: " + (quadrantRepresentation(moves['b'])) + ", \n    w: " + (quadrantRepresentation(moves['w'])) + "\n};");
+  lines.push("" + positionDataPrefix + "PAWN_NON_TAKING_MOVES = {}");
+  lines.push("" + positionDataPrefix + "PAWN_NON_TAKING_MOVES['b'] = " + (quadrantRepresentation(moves['b'])));
+  lines.push("" + positionDataPrefix + "PAWN_NON_TAKING_MOVES['w'] = " + (quadrantRepresentation(moves['w'])));
   moves = {
     b: loadPawnTakingMoves('b'),
     w: loadPawnTakingMoves('w')
   };
-  lines.push("" + positionDataPrefix + "PAWN_TAKING_MOVES = {\n    b: " + (quadrantRepresentation(moves['b'])) + ", \n    w: " + (quadrantRepresentation(moves['w'])) + "\n};");
+  lines.push("" + positionDataPrefix + "PAWN_TAKING_MOVES = {}");
+  lines.push("" + positionDataPrefix + "PAWN_TAKING_MOVES['b'] = " + (quadrantRepresentation(moves['b'])));
+  lines.push("" + positionDataPrefix + "PAWN_TAKING_MOVES['w'] = " + (quadrantRepresentation(moves['w'])));
   shadows = loadShadows();
   lines.push("" + positionDataPrefix + "SHADOWS = " + (quadrantRepresentation(shadows)) + ";");
   lines.push("" + bitBoardDataPrefix + "SQUARE_VALUES = [");
+  sep = ',';
   for (square = 0; square <= 63; square++) {
-    lines.push("    " + (JSON.stringify(valueOfSquare(square))) + ",");
+    if (square === 63) sep = '';
+    lines.push(("    " + (JSON.stringify(valueOfSquare(square)))) + sep);
   }
   lines.push("];");
   return lines;

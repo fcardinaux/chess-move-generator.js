@@ -4,7 +4,20 @@ Chess Move Generator
 @copyright 2012 François Cardinaux
 
 Licence: see README.md
+
+Things to be aware of when using clojure compiler's advanced optimization
+=========================================================================
+
+Read https://developers.google.com/closure/compiler/docs/api-tutorial3#dangers
+
+In particular:
+* When accessing an object's element, always use the same method: either myObject['myKey'] or myObject.myKey
+* Observe the way the NoCompile is created and used to export the symbols that must be kept after clojure compiler's advanced optimization
+
 ###
+
+# Strict mode (https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Functions_and_function_scope/Strict_mode)
+"use strict"
 
 class clg
     @opened: false
@@ -44,7 +57,6 @@ class clg
                     line = Math.floor( line / 2 )
                 console.log('|' + text + '|')
         console.log('+--------+')
-
 
 # =============================================================================
 
@@ -126,8 +138,8 @@ class CMGPosition
     @ROW_SPAN:              8
     @BOTTOM_LEFT_CORNER:    0
     @BOTTOM_RIGHT_CORNER:   7
-    @TOP_LEFT_CORNER:       070
-    @TOP_RIGHT_CORNER:      077
+    @TOP_LEFT_CORNER:       56
+    @TOP_RIGHT_CORNER:      63
 
     # -------------------------------------------------------------------------
     # Internal encoding for castling:
@@ -178,6 +190,12 @@ class CMGPosition
 
         # Return the position
         new CMGPosition(pieces, turn, allowedCastling, enPassantSquare, halfMoveClock, moveNumber)
+
+    @squareNumberToString: (squareNumber) ->
+        rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN)
+        colValue = squareNumber % CMGPosition.ROW_SPAN
+
+        String.fromCharCode(colValue + 97) + String.fromCharCode(rowValue + 49) # 97 is 'a', 49 is '1'
 
     # -------------------------------------------------------------------------
     # Private functions of class (comparable to static methods)
@@ -288,12 +306,6 @@ class CMGPosition
             when "w" then return "b"
         defaultValue
 
-    @squareNumberToString: (squareNumber) ->
-        rowValue = Math.floor(squareNumber / CMGPosition.ROW_SPAN)
-        colValue = squareNumber % CMGPosition.ROW_SPAN
-
-        String.fromCharCode(colValue + 97) + String.fromCharCode(rowValue + 49) # 97 is 'a', 49 is '1'
-
     # -------------------------------------------------------------------------
     # Constructor
 
@@ -303,12 +315,14 @@ class CMGPosition
         @param pieces (Object) With object keys = square ids and object values = instances of CMGPiece
         @param turn (false|"b"|"w")
         @param allowedCastling (integer)
-        @param enPassantSquare (false|integer where integer is between 0 (bottom right corner) and 077 (top right corner)
+        @param enPassantSquare (false|integer where integer is between 0 (bottom right corner) and 63 (top right corner)
         @param halfMoveClock (integer)
         @param moveNumber (integer)
         ###
 
-        @piecesOfColor = {b: {}, w: {}}
+        @piecesOfColor = {}
+        @piecesOfColor['b'] = {}
+        @piecesOfColor['w'] = {}
 
         if @pieces
             # This test is necessary, because if CMGUtil.cloneObject() is used, the object is first created empty
@@ -355,10 +369,12 @@ class CMGPosition
         # todo implement... with @_isValidMoveObject()?
         true
 
-    allPossibleMovesFromSquare: (squareKey) ->
+    allPossibleMovesFromSquare: (squareKey, piece = null) ->
         squareKey = CMGUtil.toString(squareKey)
 
-        piece = @_getPieceOnSquare(squareKey)
+        if not piece
+            piece = @_getPieceOnSquare(squareKey)
+
         if not piece
             return 0x0
 
@@ -383,7 +399,7 @@ class CMGPosition
         for square, piece of @pieces
             if piece.color isnt @turn
                 continue
-            moves = @allPossibleMovesFromSquare(square)
+            moves = @allPossibleMovesFromSquare(square, piece)
             if moves.length > 0
                 result = result.concat(moves)
 
@@ -421,15 +437,15 @@ class CMGPosition
         # Move the rook if castling
         if move.castling is 'k'
             if @turn is 'b'
-                pieces[075] = pieces[077]
-                delete pieces[077]
+                pieces[61] = pieces[63]
+                delete pieces[63]
             if @turn is 'w'
                 pieces[5] = pieces[7]
                 delete pieces[7]
         else if move.castling is 'q'
             if @turn is 'b'
-                pieces[073] = pieces[070]
-                delete pieces[070]
+                pieces[59] = pieces[56]
+                delete pieces[56]
             if @turn is 'w'
                 pieces[3] = pieces[0]
                 delete pieces[0]
@@ -442,18 +458,18 @@ class CMGPosition
             when   0 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN )
             when   4 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN & ~ CMGPosition.CASTLING_CODE_WHITE_KING )
             when   7 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_KING )
-            when 070 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN )
-            when 074 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~ CMGPosition.CASTLING_CODE_BLACK_KING )
-            when 077 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_KING )
+            when  56 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN )
+            when  60 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~ CMGPosition.CASTLING_CODE_BLACK_KING )
+            when  63 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_KING )
 
         if move.takenOnSquare isnt false and move.takenPiece.type is 'r'
             switch parseInt(move.takenOnSquare)
                 when   0 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN )
                 when   4 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_QUEEN & ~ CMGPosition.CASTLING_CODE_WHITE_KING )
                 when   7 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_WHITE_KING )
-                when 070 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN )
-                when 074 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~ CMGPosition.CASTLING_CODE_BLACK_KING )
-                when 077 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_KING )
+                when  56 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN )
+                when  60 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_QUEEN & ~ CMGPosition.CASTLING_CODE_BLACK_KING )
+                when  63 then allowedCastling &= ( ~ CMGPosition.CASTLING_CODE_BLACK_KING )
 
         enPassantSquare = false
         if move.fromPiece.type is 'p'
@@ -822,6 +838,9 @@ class CMGMove
             out += @toPiece.type.toUpperCase()
         out
 
+    getNewPosition: () ->
+        @newPosition
+
     setNewPositionObject: (@newPosition) ->
 
 # =============================================================================
@@ -900,8 +919,44 @@ class CMGUtil
 
 
 # =============================================================================
+# Export the symbols that must be kept after clojure compiler's advanced optimization
 
-module.exports =
-    bitBoard: CMGBitBoard
-    position: CMGPosition
-    move: CMGMove
+NoCompile = {}
+
+NoCompile.position = CMGPosition
+NoCompile.position['fromString'] = CMGPosition.fromString
+NoCompile.position.prototype['clone'] = CMGPosition.prototype.clone
+NoCompile.position.prototype['playerColorCode'] = CMGPosition.prototype.playerColorCode
+NoCompile.position.prototype['opponentColorCode'] = CMGPosition.prototype.opponentColorCode
+NoCompile.position.prototype['toString'] = CMGPosition.prototype.toString
+NoCompile.position.prototype['toStringWithoutCounters'] = CMGPosition.prototype.toStringWithoutCounters
+NoCompile.position.prototype['allPossibleMovesFromSquare'] = CMGPosition.prototype.allPossibleMovesFromSquare
+NoCompile.position.prototype['allPossibleMoves'] = CMGPosition.prototype.allPossibleMoves
+NoCompile.position.prototype['isDraw'] = CMGPosition.prototype.isDraw
+NoCompile.position.prototype['getWinnerColorCode'] = CMGPosition.prototype.getWinnerColorCode
+
+# TODO TEST ONLY
+NoCompile.position['_allowedCastlingStringToValue'] = CMGPosition._allowedCastlingStringToValue
+NoCompile.position['_allowedCastlingValueToString'] = CMGPosition._allowedCastlingValueToString
+
+NoCompile.move = CMGMove
+NoCompile.move['fromStringAndPosition'] = CMGMove.fromStringAndPosition
+NoCompile.move.prototype['toString'] = CMGMove.prototype.toString
+NoCompile.move.prototype['getNewPosition'] = CMGMove.prototype.getNewPosition
+
+# TODO TEST ONLY
+NoCompile.bitBoard = CMGBitBoard
+NoCompile.bitBoard['valueOfSquare'] = CMGBitBoard.valueOfSquare
+
+if typeof window isnt 'undefined'
+    window['ChessPosition'] = NoCompile.position
+    window['ChessMove'] = NoCompile.move
+
+# =============================================================================
+# Export the symbols that must be access via node.js
+
+if typeof module isnt 'undefined'
+    module['exports']['bitBoard'] = NoCompile.bitBoard # TODO TEST ONLY
+    module['exports']['position'] = NoCompile.position
+    module['exports']['move']     = NoCompile.move
+

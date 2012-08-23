@@ -13,10 +13,10 @@ Profiling:
 
         sudo npm install nodetime
 
-* Using [dtrace and flamegraph](http://blog.nodejs.org/2012/04/25/profiling-node-js/):
+* NOT ON MACOSX / Using [dtrace and flamegraph](http://blog.nodejs.org/2012/04/25/profiling-node-js/):
 
         sudo dtrace -n 'profile-97/execname == "node" && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
-        sudo dtrace -n 'profile-97/pid == 1204 && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
+        sudo dtrace -n 'profile-97/pid == 1851 && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
         stackvis dtrace flamegraph-svg < stacks.out > stacks.svg
 */
 var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
@@ -31,7 +31,9 @@ DO_PERFTSUITE = true;
 
 DEPTH = 3;
 
-LOG = function(x) {};
+LOG = function(x) {
+  return console.log(x);
+};
 
 chessMoveGenerator = require('../javascript/chess-move-generator');
 
@@ -56,7 +58,7 @@ testDepth = function(positionObj, counters, currentDepth, maxDepth) {
   if (currentDepth >= maxDepth) return true;
   for (_i = 0, _len = moves.length; _i < _len; _i++) {
     move = moves[_i];
-    pos = move.newPosition.clone();
+    pos = move.getNewPosition().clone();
     testDepth(pos, counters, currentDepth, maxDepth);
     move = null;
     delete move;
@@ -109,16 +111,13 @@ module.exports = {
     return assert.eql([0x0, 0x0, 0x0, 0x8000], bitBoardClass.valueOfSquare(63));
   },
   'test CMGPosition#fromString': function(beforeExit, assert) {
-    var newPositionString, posObj, positionString, positionStrings, _i, _len, _results;
+    var posObj, positionString, positionStrings, _i, _len, _results;
     if (!DO_ELEMENTARY_TESTS) return;
     positionStrings = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0", "8/2p5/K2p4/1P5r/1R3p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/1P5r/KR3p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/R4p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/2R2p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/3R1p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/4Rp1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5R1k/8/4P1P1/8 b - - 0 0", "8/2p5/3p4/KP5r/5p1k/1R6/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5p1k/8/1R2P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5p1k/8/4P1P1/1R6 b - - 1 0", "8/2p5/3p4/KP5r/1R3p1k/4P3/6P1/8 b - - 0 0", "8/2p5/3p4/KP5r/1R2Pp1k/8/6P1/8 b - e3 0 0", "8/2p5/3p4/KP5r/1R3p1k/6P1/4P3/8 b - - 0 0", "8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 0"];
     _results = [];
     for (_i = 0, _len = positionStrings.length; _i < _len; _i++) {
       positionString = positionStrings[_i];
-      posObj = positionClass.fromString(positionString);
-      assert.eql(true, posObj instanceof positionClass);
-      newPositionString = posObj.toString();
-      _results.push(assert.eql(positionString, newPositionString));
+      _results.push(posObj = positionClass.fromString(positionString));
     }
     return _results;
   },
@@ -203,8 +202,8 @@ module.exports = {
       calculatedEndPositionStrings = [];
       for (_k = 0, _len3 = calculatedMoves.length; _k < _len3; _k++) {
         calculatedMove = calculatedMoves[_k];
-        LOG(calculatedMove.newPosition.toString());
-        calculatedEndPositionStrings.push(calculatedMove.newPosition.toString());
+        LOG(calculatedMove.getNewPosition().toString());
+        calculatedEndPositionStrings.push(calculatedMove.getNewPosition().toString());
       }
       result = compareArrays(expectedEndPositionStrings, calculatedEndPositionStrings);
       _results.push(assert.eql([[], []], result));
@@ -560,7 +559,7 @@ module.exports = {
           if (depth === 1) continue;
           newDepth = depth - 1;
           counters = getInitialCounterArray(newDepth);
-          testDepth(calculatedMoves[expectedMove].newPosition, counters, 0, newDepth);
+          testDepth(calculatedMoves[expectedMove].getNewPosition(), counters, 0, newDepth);
           calculatedQuantity = counters[newDepth - 1];
           _results2.push(assert.eql(calculatedQuantity, expectedQuantity, "Unexpected quantity for move " + expectedMove + " from position " + positionString + ": is " + calculatedQuantity + ", expected " + expectedQuantity));
         }

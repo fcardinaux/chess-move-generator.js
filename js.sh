@@ -37,22 +37,31 @@ mv chess-move-generator.test.js ../test/
 
 # =============================================================================
 
+compiler=none
+compressor=none
+unit_test=no
 case $# in
     0)
-        echo "Compressing..."
-        java -jar ../$yui_compressor -o chess-move-generator.js chess-move-generator.js
-        echo '// Chess Move Generator - Copyright 2012 François Cardinaux, CH 1207 Genève - License: todo' | cat - chess-move-generator.js > temp && mv temp chess-move-generator.js
         ;;
-    1)
-        case $1 in
-            "u")
-                echo "Leaving the file uncompressed..."
-                ;;
-            *)
-                echo -e "\033[31mUnknown parameter $1\033[0m"
-                exit
-                ;;
-        esac
+    1|2|3)
+        for arg in `seq 1 $#`
+        do
+            case ${!arg} in
+                "j")
+                    compiler=clojure
+                    ;;
+                "t")
+                    unit_test=yes
+                    ;;
+                "y")
+                    compressor=yui
+                    ;;
+                *)
+                    echo -e "\033[31mUnknown parameter ${!arg}\033[0m"
+                    exit
+                    ;;
+            esac
+        done
         ;;
     *)
         echo -e "\033[31mToo many parameters\033[0m"
@@ -62,11 +71,45 @@ esac
 
 # =============================================================================
 
-echo "Running unit tests..."
+case $compiler in
+    "none")
+        echo "Skipping compilation..."
+        ;;
+    "clojure")
+        echo "Compiling with clojure compiler..."
+        # java -jar ../../external-tools/clojure-compiler/compiler.jar --compilation_level=SIMPLE_OPTIMIZATIONS --js=chess-move-generator.js --js_output_file=cmg.js
+        java -jar ../../external-tools/clojure-compiler/compiler.jar --compilation_level=ADVANCED_OPTIMIZATIONS --js=chess-move-generator.js --js_output_file=cmg.js
+        mv cmg.js chess-move-generator.js
+        ;;
+esac
 
-cd ..
-T="$(date +%s)"
-node_modules/expresso/bin/expresso test/chess-move-generator.test.js
-# http://stackoverflow.com/a/3684051
-T="$(($(date +%s)-T))"
-printf "Elapsed time: %02d:%02d:%02d:%02d\n" "$((T/86400))" "$((T/3600%24))" "$((T/60%60))" "$((T%60))"
+# =============================================================================
+
+case $compressor in
+    "none")
+        echo "Leaving the file uncompressed..."
+        ;;
+    "yui")
+        echo "Compressing with yuiCompressor..."
+        java -jar ../$yui_compressor -o chess-move-generator.js chess-move-generator.js
+        echo '// Chess Move Generator - Copyright 2012 François Cardinaux, CH 1207 Genève - License: todo' | cat - chess-move-generator.js > temp && mv temp chess-move-generator.js
+        ;;
+esac
+
+# =============================================================================
+
+case $unit_test in
+    "no")
+        echo "Skipping unit tests..."
+        ;;
+    "yes")
+        echo "Running unit tests..."
+        cd ..
+        T="$(date +%s)"
+        node_modules/expresso/bin/expresso test/chess-move-generator.test.js
+        # http://stackoverflow.com/a/3684051
+        T="$(($(date +%s)-T))"
+        printf "Elapsed time: %02d:%02d:%02d:%02d\n" "$((T/86400))" "$((T/3600%24))" "$((T/60%60))" "$((T%60))"        ;;
+    "no")
+        ;;
+esac

@@ -87,8 +87,6 @@ Numbering of each bitboard quadrant (hexadecimal here):
 "Keys [of objects] can only be strings, and numeric keys such as those used in Arrays are coerced and stored as strings"
 (http://stackoverflow.com/a/6066954)
 
-
-
 Todos
 =====
 
@@ -479,19 +477,25 @@ module.exports.generateJavascriptLines = (bitBoardDataPrefix, positionDataPrefix
     moves =
         b: loadPawnNonTakingMoves('b')
         w: loadPawnNonTakingMoves('w')
-    lines.push("#{positionDataPrefix}PAWN_NON_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
+    lines.push("#{positionDataPrefix}PAWN_NON_TAKING_MOVES = {}")
+    lines.push("#{positionDataPrefix}PAWN_NON_TAKING_MOVES['b'] = #{quadrantRepresentation(moves['b'])}")
+    lines.push("#{positionDataPrefix}PAWN_NON_TAKING_MOVES['w'] = #{quadrantRepresentation(moves['w'])}")
 
     moves =
         b: loadPawnTakingMoves('b')
         w: loadPawnTakingMoves('w')
-    lines.push("#{positionDataPrefix}PAWN_TAKING_MOVES = {\n    b: #{quadrantRepresentation(moves['b'])}, \n    w: #{quadrantRepresentation(moves['w'])}\n};")
+    lines.push("#{positionDataPrefix}PAWN_TAKING_MOVES = {}")
+    lines.push("#{positionDataPrefix}PAWN_TAKING_MOVES['b'] = #{quadrantRepresentation(moves['b'])}")
+    lines.push("#{positionDataPrefix}PAWN_TAKING_MOVES['w'] = #{quadrantRepresentation(moves['w'])}")
 
     shadows = loadShadows()
     lines.push("#{positionDataPrefix}SHADOWS = #{quadrantRepresentation(shadows)};")
 
     lines.push("#{bitBoardDataPrefix}SQUARE_VALUES = [")
+    sep = ','
     for square in [0..63]
-        lines.push("    #{JSON.stringify( valueOfSquare(square) )},")
+        sep = '' if square is 63
+        lines.push( "    #{JSON.stringify( valueOfSquare(square) )}" + sep )
     lines.push("];")
 
     return lines
