@@ -310,10 +310,10 @@ class CMGPosition
     # -------------------------------------------------------------------------
     # Public functions of object (comparable to non static methods)
 
-    clone: (withLazyObject = true) ->
+    clone: (withLazyObject = false) ->
         out = new CMGPosition(@pieces, @turn, @allowedCastling, @enPassantSquare, @halfMoveClock, @moveNumber)
-        if not withLazyObject
-            out.lazy = {}
+        if withLazyObject
+            out.lazy = CMGUtil.cloneObject( @lazy )
         return out
 
     playerColorCode: () ->
@@ -565,7 +565,7 @@ class CMGPosition
     _pseudoThreatsOnPlayerBeforeMove: () ->
         if not @lazy.hasOwnProperty('ptpbm')
 
-            invPosition = @clone(false) # Force the pseudo-move bitboard to be recalculated
+            invPosition = @clone() # Lazy object not cloned, thus the pseudo-move bitboard will be recalculated
             invPosition.turn = @opponentColorCode()
             invPosition.enPassantSquare = false
             invPosition.allowedCastling = false # Avoid unnecessary evaluations

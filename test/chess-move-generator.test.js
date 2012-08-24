@@ -65,7 +65,7 @@ testDepth = function(positionObj, counters, currentDepth, maxDepth, log) {
     if (log) {
       LOG_PERFTSUITE("  * testing move " + (moveId + 1) + " of " + moveQuantity);
     }
-    pos = move.getNewPosition().clone();
+    pos = move.getNewPosition().clone(true);
     testDepth(pos, counters, currentDepth, maxDepth);
     move = null;
     delete move;
