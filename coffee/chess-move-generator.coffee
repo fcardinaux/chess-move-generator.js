@@ -93,8 +93,9 @@ class CMGBitBoard
                     squareKeys.push(qid * 16 + key)
         return squareKeys
 
-    @clone: ( bb ) ->
-        [bb[0], bb[1], bb[2], bb[3]]
+    # Not used. Remove comments if needed
+    # @clone: ( bb ) ->
+    #     [bb[0], bb[1], bb[2], bb[3]]
 
 # =============================================================================
 
