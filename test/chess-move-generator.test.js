@@ -19,7 +19,7 @@ Profiling:
         sudo dtrace -n 'profile-97/pid == 1851 && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
         stackvis dtrace flamegraph-svg < stacks.out > stacks.svg
 */
-var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
+var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG_MOVE_TEST, LOG_PERFTSUITE, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
 
 DO_ELEMENTARY_TESTS = false;
 
@@ -31,7 +31,9 @@ DO_PERFTSUITE = true;
 
 DEPTH = 3;
 
-LOG = function(x) {
+LOG_MOVE_TEST = function(x) {};
+
+LOG_PERFTSUITE = function(x) {
   return console.log(x);
 };
 
@@ -50,14 +52,19 @@ getInitialCounterArray = function(maxDepth) {
   return counters;
 };
 
-testDepth = function(positionObj, counters, currentDepth, maxDepth) {
-  var move, moves, pos, _i, _len;
+testDepth = function(positionObj, counters, currentDepth, maxDepth, log) {
+  var move, moveId, moveQuantity, moves, pos, _len;
+  if (log == null) log = false;
   moves = positionObj.allPossibleMoves();
-  counters[currentDepth] += moves.length;
+  moveQuantity = moves.length;
+  counters[currentDepth] += moveQuantity;
   currentDepth++;
   if (currentDepth >= maxDepth) return true;
-  for (_i = 0, _len = moves.length; _i < _len; _i++) {
-    move = moves[_i];
+  for (moveId = 0, _len = moves.length; moveId < _len; moveId++) {
+    move = moves[moveId];
+    if (log) {
+      LOG_PERFTSUITE("  * testing move " + (moveId + 1) + " of " + moveQuantity);
+    }
     pos = move.getNewPosition().clone();
     testDepth(pos, counters, currentDepth, maxDepth);
     move = null;
@@ -191,18 +198,18 @@ module.exports = {
     for (_i = 0, _len = testVector.length; _i < _len; _i++) {
       _ref = testVector[_i], startPositionString = _ref[0], expectedEndPositionStrings = _ref[1];
       positionObj = positionClass.fromString(startPositionString);
-      LOG('Start = ' + startPositionString);
-      LOG('Expected: ');
+      LOG_MOVE_TEST('Start = ' + startPositionString);
+      LOG_MOVE_TEST('Expected: ');
       for (_j = 0, _len2 = expectedEndPositionStrings.length; _j < _len2; _j++) {
         eps = expectedEndPositionStrings[_j];
-        LOG(eps);
+        LOG_MOVE_TEST(eps);
       }
-      LOG('Calculated: ');
+      LOG_MOVE_TEST('Calculated: ');
       calculatedMoves = positionObj.allPossibleMoves();
       calculatedEndPositionStrings = [];
       for (_k = 0, _len3 = calculatedMoves.length; _k < _len3; _k++) {
         calculatedMove = calculatedMoves[_k];
-        LOG(calculatedMove.getNewPosition().toString());
+        LOG_MOVE_TEST(calculatedMove.getNewPosition().toString());
         calculatedEndPositionStrings.push(calculatedMove.getNewPosition().toString());
       }
       result = compareArrays(expectedEndPositionStrings, calculatedEndPositionStrings);
@@ -569,37 +576,46 @@ module.exports = {
     return _results;
   },
   'test perftsuite.txt': function(beforeExit, assert) {
-    var fs, testFile, testLine;
+    var fs, iLine, nbLines, testFile, testLine;
     if (!DO_PERFTSUITE) return;
     fs = require('fs');
+    nbLines = 0;
+    iLine = 0;
     testLine = function(line) {
-      var counter, counterId, counters, elems, expectedQuantity, maxDepth, positionObj, positionString, _len, _results;
-      line = trimString(line);
-      if (line === '') return;
+      var counter, counterId, counters, elems, expectedQuantity, maxDepth, positionObj, positionString, _len;
+      iLine++;
       elems = line.split(' ;');
       positionString = elems.shift();
+      LOG_PERFTSUITE("Verifying line " + iLine + " of " + nbLines + " (" + positionString + "):");
       positionObj = positionClass.fromString(positionString);
       assert.eql(positionString, positionObj.toString());
       maxDepth = DEPTH;
       if (elems.length < maxDepth) maxDepth = elem.length;
       counters = getInitialCounterArray(maxDepth);
-      testDepth(positionObj, counters, 0, maxDepth);
-      _results = [];
+      testDepth(positionObj, counters, 0, maxDepth, true);
       for (counterId = 0, _len = counters.length; counterId < _len; counterId++) {
         counter = counters[counterId];
         expectedQuantity = parseInt(elems[counterId].split(' ')[1]);
-        _results.push(assert.eql(counter, expectedQuantity));
+        assert.eql(counter, expectedQuantity);
       }
-      return _results;
+      LOG_PERFTSUITE("Position OK at depth " + maxDepth + ".");
+      return LOG_PERFTSUITE("");
     };
     testFile = function(err, data) {
-      var lines;
+      var line, lineId, lines, _len;
       if (err) {
         console.log(err);
         return;
       }
       lines = data.split("\n");
-      return lines.map(testLine);
+      for (lineId = 0, _len = lines.length; lineId < _len; lineId++) {
+        line = lines[lineId];
+        line = trimString(line);
+        if (line === '') lines.splice(lineId, 1);
+      }
+      nbLines = lines.length;
+      lines.map(testLine);
+      return LOG_PERFTSUITE("All positions OK up to depth " + DEPTH + ".");
     };
     return fs.readFile('./test-data/perftsuite.txt', 'utf8', testFile);
   }

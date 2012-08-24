@@ -34,8 +34,11 @@ DO_DIVISION_TEST = false
 DO_PERFTSUITE = true
 DEPTH = 3
 
-LOG = (x) ->
+LOG_MOVE_TEST = (x) ->
     # console.log(x)
+
+LOG_PERFTSUITE = (x) ->
+    console.log(x)
 
 # =============================================================================
 
@@ -51,16 +54,19 @@ getInitialCounterArray = (maxDepth) ->
         counters.push(0)
     counters
 
-testDepth = (positionObj, counters, currentDepth, maxDepth) ->
-    moves = positionObj.allPossibleMoves()
+testDepth = (positionObj, counters, currentDepth, maxDepth, log = false) ->
 
-    counters[currentDepth] += moves.length
+    moves = positionObj.allPossibleMoves()
+    moveQuantity = moves.length
+
+    counters[currentDepth] += moveQuantity
 
     currentDepth++
     if currentDepth >= maxDepth
         return true
 
-    for move in moves
+    for move, moveId in moves
+        LOG_PERFTSUITE("  * testing move #{(moveId+1)} of #{moveQuantity}") if log
         pos = move.getNewPosition().clone()
         testDepth(pos, counters, currentDepth, maxDepth)
         move = null
@@ -511,16 +517,16 @@ module.exports =
         for [startPositionString, expectedEndPositionStrings] in testVector
             positionObj = positionClass.fromString(startPositionString)
 
-            LOG('Start = ' + startPositionString)
-            LOG('Expected: ')
+            LOG_MOVE_TEST('Start = ' + startPositionString)
+            LOG_MOVE_TEST('Expected: ')
             for eps in expectedEndPositionStrings
-                LOG(eps)
-            LOG('Calculated: ')
+                LOG_MOVE_TEST(eps)
+            LOG_MOVE_TEST('Calculated: ')
 
             calculatedMoves = positionObj.allPossibleMoves()
             calculatedEndPositionStrings = []
             for calculatedMove in calculatedMoves
-                LOG(calculatedMove.getNewPosition().toString())
+                LOG_MOVE_TEST(calculatedMove.getNewPosition().toString())
                 calculatedEndPositionStrings.push( calculatedMove.getNewPosition().toString() )
             result = compareArrays expectedEndPositionStrings, calculatedEndPositionStrings
 
@@ -910,12 +916,17 @@ module.exports =
 
         fs = require('fs');
 
+        nbLines = 0
+        iLine = 0
+
         testLine = (line) ->
-            line = trimString line
-            if line is ''
-                return
+
+            iLine++
+
             elems = line.split(' ;')
             positionString = elems.shift()
+
+            LOG_PERFTSUITE("Verifying line #{iLine} of #{nbLines} (#{positionString}):")
 
             # Make sure the position string is correctly transformed into a position object
             positionObj = positionClass.fromString(positionString)
@@ -930,12 +941,15 @@ module.exports =
             counters = getInitialCounterArray(maxDepth)
 
             # Count
-            testDepth(positionObj, counters, 0, maxDepth)
+            testDepth(positionObj, counters, 0, maxDepth, true)
 
             # Now compare the counters to the expected result
             for counter, counterId in counters
                 expectedQuantity = parseInt(elems[counterId].split(' ')[1])
                 assert.eql(counter, expectedQuantity)
+
+            LOG_PERFTSUITE("Position OK at depth #{maxDepth}.")
+            LOG_PERFTSUITE("")
 
         testFile = (err, data) ->
             if err
@@ -944,7 +958,16 @@ module.exports =
 
             lines = data.split("\n")
 
+            for line, lineId in lines
+                line = trimString line
+                if line is ''
+                    lines.splice(lineId, 1)
+
+            nbLines = lines.length
+
             lines.map(testLine)
+
+            LOG_PERFTSUITE("All positions OK up to depth #{DEPTH}.")
 
         fs.readFile('./test-data/perftsuite.txt', 'utf8', testFile);
 

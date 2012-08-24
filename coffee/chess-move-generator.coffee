@@ -19,47 +19,6 @@ In particular:
 # Strict mode (https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Functions_and_function_scope/Strict_mode)
 "use strict"
 
-class clg
-    @opened: false
-
-    @open: (val = true) ->
-        prev = @opened
-        @opened = val
-        return prev
-
-    @close: () ->
-        @opened = false
-
-    @log: (x, isBitBoard = false) ->
-        if not @opened
-            return
-        if isBitBoard
-            @_logBitBoard(x)
-        else
-            console.log(x)
-
-    @_logBitBoard: (bb) ->
-        ###
-        For debugging
-        ###
-        console.log(JSON.stringify(bb) + ':')
-        console.log('+--------+')
-        val = ['.', 'x']
-        for quadrantKey in [3..0]
-            quadrant = bb[quadrantKey]
-            lines = []
-            lines[0] = Math.floor(quadrant / 256)
-            lines[1] = quadrant % 256
-            for line in lines
-                text = ''
-                for bit in [0..7]
-                    text += val[line % 2]
-                    line = Math.floor( line / 2 )
-                console.log('|' + text + '|')
-        console.log('+--------+')
-
-# =============================================================================
-
 class CMGBitBoard
 
     @EMPTY_BOARD    = [0, 0, 0, 0]
@@ -935,18 +894,10 @@ NoCompile.position.prototype['allPossibleMoves'] = CMGPosition.prototype.allPoss
 NoCompile.position.prototype['isDraw'] = CMGPosition.prototype.isDraw
 NoCompile.position.prototype['getWinnerColorCode'] = CMGPosition.prototype.getWinnerColorCode
 
-# TODO TEST ONLY
-NoCompile.position['_allowedCastlingStringToValue'] = CMGPosition._allowedCastlingStringToValue
-NoCompile.position['_allowedCastlingValueToString'] = CMGPosition._allowedCastlingValueToString
-
 NoCompile.move = CMGMove
 NoCompile.move['fromStringAndPosition'] = CMGMove.fromStringAndPosition
 NoCompile.move.prototype['toString'] = CMGMove.prototype.toString
 NoCompile.move.prototype['getNewPosition'] = CMGMove.prototype.getNewPosition
-
-# TODO TEST ONLY
-NoCompile.bitBoard = CMGBitBoard
-NoCompile.bitBoard['valueOfSquare'] = CMGBitBoard.valueOfSquare
 
 if typeof window isnt 'undefined'
     window['ChessPosition'] = NoCompile.position
@@ -956,7 +907,6 @@ if typeof window isnt 'undefined'
 # Export the symbols that must be access via node.js
 
 if typeof module isnt 'undefined'
-    module['exports']['bitBoard'] = NoCompile.bitBoard # TODO TEST ONLY
     module['exports']['position'] = NoCompile.position
     module['exports']['move']     = NoCompile.move
 
