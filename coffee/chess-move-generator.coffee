@@ -36,8 +36,13 @@ class CMGBitBoard
                 return false
         return true
 
-    @isZero: (bb) ->
-        @binEqual(bb, @EMPTY_BOARD)
+    # Not used. Remove comments if needed
+    # @isZero: (bb) ->
+    #     @binEqual(bb, @EMPTY_BOARD)
+
+    @boolNand: (bb1, bb2) ->
+        # On average quicker than "@isZero( @binAnd(bb1, bb2) )"
+        (0 is (bb1[0] & bb2[0])) and (0 is (bb1[1] & bb2[1])) and (0 is (bb1[2] & bb2[2])) and (0 is (bb1[3] & bb2[3]))
 
     @binAnd: (bb1, bb2) ->
         [
@@ -47,6 +52,11 @@ class CMGBitBoard
             bb1[3] & bb2[3]
         ]
 
+    # Not used. Remove comments if needed
+    # @boolOr: (bb1, bb2) ->
+    #     # On average quicker than "not @isZero( @binOr(bb1, bb2) )"
+    #     (0 < (bb1[0] & bb2[0])) or (0 < (bb1[1] & bb2[1])) or (0 < (bb1[2] & bb2[2])) or (0 < (bb1[3] & bb2[3]))
+
     @binOr: (bb1, bb2) ->
         [
             bb1[0] | bb2[0],
@@ -55,13 +65,14 @@ class CMGBitBoard
             bb1[3] | bb2[3]
         ]
 
-    @binXor: (bb1, bb2) ->
-        [
-            bb1[0] ^ bb2[0],
-            bb1[1] ^ bb2[1],
-            bb1[2] ^ bb2[2],
-            bb1[3] ^ bb2[3]
-        ]
+    # Not used. Remove comments if needed
+    # @binXor: (bb1, bb2) ->
+    #     [
+    #         bb1[0] ^ bb2[0],
+    #         bb1[1] ^ bb2[1],
+    #         bb1[2] ^ bb2[2],
+    #         bb1[3] ^ bb2[3]
+    #     ]
 
     @binNot: (bb) ->
         [
@@ -534,25 +545,19 @@ class CMGPosition
                 threats = @_pseudoThreatsOnPlayerBeforeMove()
 
                 kingSquareBitBoard = @bitBoards.allPiecesOfColorAndType[@turn]['k']
-                kingSquareAttackBitBoard = CMGBitBoard.binAnd( kingSquareBitBoard, threats )
+                kingQuadrant = 0
+                if @turn is 'b'
+                    kingQuadrant = 3
 
-                if not CMGBitBoard.isZero( kingSquareAttackBitBoard )
+                if 0 < ( kingSquareBitBoard[kingQuadrant] & threats[kingQuadrant] )
                     @lazy['pks']['k'] = false
                     @lazy['pks']['q'] = false
                 else
                     if @lazy['pks']['k']
-                        rightOfKingBitBoard = CMGBitBoard.clone( kingSquareBitBoard )
-                        rightOfKingBitBoard[0] = rightOfKingBitBoard[0] << 1
-                        rightOfKingBitBoard[3] = rightOfKingBitBoard[3] << 1
-                        rightOfKingAttackBitBoard = CMGBitBoard.binAnd( rightOfKingBitBoard, threats )
-                        @lazy['pks']['k'] = false if not CMGBitBoard.isZero( rightOfKingAttackBitBoard )
+                        @lazy['pks']['k'] = false if 0 < ( (kingSquareBitBoard[kingQuadrant] << 1) & threats[kingQuadrant] )
 
                     if @lazy['pks']['q']
-                        leftOfKingBitBoard = CMGBitBoard.clone( kingSquareBitBoard )
-                        leftOfKingBitBoard[0] = leftOfKingBitBoard[0] >> 1
-                        leftOfKingBitBoard[3] = leftOfKingBitBoard[3] >> 1
-                        leftOfKingAttackBitBoard = CMGBitBoard.binAnd( leftOfKingBitBoard, threats )
-                        @lazy['pks']['q'] = false if not CMGBitBoard.isZero( leftOfKingAttackBitBoard )
+                        @lazy['pks']['q'] = false if 0 < ( (kingSquareBitBoard[kingQuadrant] >> 1) & threats[kingQuadrant] )
 
         return @lazy['pks'][castlingSide]
 
@@ -592,14 +597,14 @@ class CMGPosition
 
                 # Castling move if any
                 if movedPiece.color is 'b'
-                    if (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING)  and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_KING)  and CMGBitBoard.boolNand( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_KING.mustBeEmpty )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_BLACK_KING.move )
-                    if (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_BLACK_QUEEN) and CMGBitBoard.boolNand( @bitBoards.allPieces, CMGPosition.CASTLING_BLACK_QUEEN.mustBeEmpty )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_BLACK_QUEEN.move )
                 else
-                    if (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING)  and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_KING)  and CMGBitBoard.boolNand( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_KING.mustBeEmpty )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_WHITE_KING.move )
-                    if (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) and CMGBitBoard.isZero( CMGBitBoard.binAnd( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty ) )
+                    if (@allowedCastling & CMGPosition.CASTLING_CODE_WHITE_QUEEN) and CMGBitBoard.boolNand( @bitBoards.allPieces, CMGPosition.CASTLING_WHITE_QUEEN.mustBeEmpty )
                         out = CMGBitBoard.binOr( out, CMGPosition.CASTLING_WHITE_QUEEN.move )
 
             when 'p'
@@ -648,7 +653,7 @@ class CMGPosition
                 exclusionMap = CMGBitBoard.binNot( pieceSquareBitBoard )
 
             for direction in directions
-                if not CMGBitBoard.isZero( CMGBitBoard.binAnd( CMGPosition._light(pieceSquare, direction), squareKeyBitBoard ) )
+                if not CMGBitBoard.boolNand( CMGPosition._light(pieceSquare, direction), squareKeyBitBoard )
                     newShadows = CMGPosition._shadow(pieceSquare, direction)
                     if exclusionMap
                         newShadows = CMGBitBoard.binAnd( newShadows, exclusionMap )
