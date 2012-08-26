@@ -70,7 +70,7 @@ testDepth = (positionObj, counters, currentDepth, maxDepth, log = false) ->
 
     for move, moveId in moves
         LOG_PERFTSUITE("  * testing move #{(moveId+1)} of #{moveQuantity} (#{move.toString()})") if log
-        pos = move.getNewPosition().clone(true) # With the lazy object
+        pos = move.getNewPosition().clone(false, true) # With the lazy object
         testDepth(pos, counters, currentDepth, maxDepth)
         move = null
         delete move

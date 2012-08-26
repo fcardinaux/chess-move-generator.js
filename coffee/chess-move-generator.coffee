@@ -318,8 +318,10 @@ class CMGPosition
     # -------------------------------------------------------------------------
     # Public functions of object (comparable to non static methods)
 
-    clone: (withLazyObject = false) ->
-        out = new CMGPosition(@pieces, @turn, @allowedCastling, @enPassantSquare, @halfMoveClock, @moveNumber)
+    clone: (pieces = false, withLazyObject = false) ->
+        if not pieces
+            pieces = @pieces
+        out = new CMGPosition(pieces, @turn, @allowedCastling, @enPassantSquare, @halfMoveClock, @moveNumber)
         if withLazyObject
             out.lazy = CMGUtil.cloneObject( @lazy )
         return out
@@ -400,6 +402,57 @@ class CMGPosition
 
     # -------------------------------------------------------------------------
     # Private functions of object (comparable to non static methods)
+
+    _opponentKingAttacked: () ->
+        opponentKingBitBoard = @bitBoards.allPiecesOfColorAndType[@opponentColorCode()]['k']
+        return not CMGBitBoard.boolNand( opponentKingBitBoard, @_allPseudoMoveBitBoard() )
+
+    _kingProtectedByOriginatingSquareOfNonKingMove: (move) ->
+        if not @lazy.hasOwnProperty('kprot1')
+            @lazy['kprot1'] = {}
+
+        squareKey = '' + move.fromSquare
+        if not @lazy['kprot1'].hasOwnProperty(squareKey)
+
+            # Test if the square is under attack from a queen, a rook or a bishop, and therefore may protect the king
+            [quadrant, value] = CMGBitBoard.quadrantAndValueOfSquare( squareKey )
+            clg.log("quadrant is #{quadrant} and value is #{value}")
+            qrbTreats = @_pseudoThreatsFromQRBOnPlayerBeforeMove()
+            clg.log(qrbTreats, true)
+            clg.log(qrbTreats[quadrant])
+            squareAttackedByQRB = ( 0 < (qrbTreats[quadrant] & value) )
+            clg.log("d7 attacked by qrb: " + squareAttackedByQRB)
+
+            if squareAttackedByQRB
+
+                # What if the square were empty
+                pieces = CMGUtil.cloneObject( @pieces )
+                delete pieces[move.fromSquare]
+                altPosition = @clone( pieces ) # Lazy object not cloned, thus the pseudo-move bitboard will be recalculated
+                altPosition.turn = @opponentColorCode()
+                altPosition.enPassantSquare = false
+                altPosition.allowedCastling = false # Avoid unnecessary evaluations
+
+                @lazy['kprot1'][squareKey] = not CMGBitBoard.boolNand( @bitBoards.allPiecesOfColorAndType[@turn]['k'], altPosition._allPseudoMoveBitBoard() )
+            else
+                @lazy['kprot1'][squareKey] = false
+
+        @lazy['kprot1'][squareKey]
+
+    _attackedKingProtectedByTargetSquareOfNonKingMove: (move) ->
+        if not @lazy.hasOwnProperty('kprot2')
+            @lazy['kprot2'] = {}
+
+        squareKey = '' + move.toSquare
+        if not @lazy['kprot2'].hasOwnProperty(squareKey)
+
+            # Here, we assume the king is attacked before the move, or that it was protected by the moved piece
+            # We also assume the move is not "en passant"
+
+            # Test if king under attack after sample protecting move
+            @lazy['kprot2'][squareKey] = not move.newPosition._opponentKingAttacked() # opponent of new position, i.e. player of current position
+
+        @lazy['kprot2'][squareKey]
 
     _getNewPositionObjectAfterMove: (move) ->
         pieces = CMGUtil.cloneObject( @pieces )
@@ -700,26 +753,45 @@ class CMGPosition
             # A taking move with a pawn, but no piece has been taken
             return CMGPosition.PSEUDO_ONLY
 
-        testIfKingUnderAttackAfterMove = false
-        if move.fromPiece.type is 'k'
-            # King is moved
-            testIfKingUnderAttackAfterMove = true
-        else if not CMGBitBoard.boolNand( @bitBoards.allPiecesOfColorAndType[@turn]['k'], @_pseudoThreatsOnPlayerBeforeMove() )
-            # King was under attack before move
-            testIfKingUnderAttackAfterMove = true
-        else
-            # Test if the moved piece was under attack from a queen, a rook or a bishop before moving, and therefore may have protected the king
-            [quadrant, value] = CMGBitBoard.quadrantAndValueOfSquare(move.fromSquare)
-            qrbTreats = @_pseudoThreatsFromQRBOnPlayerBeforeMove()
-            testIfKingUnderAttackAfterMove = 0 < (qrbTreats[quadrant] & value)
+        val = false
+        if @toString() is "Rr2k2r/8/8/8/8/8/8/4K2R b - - 1 1" and move.fromSquare is '57'
+            val = true
+        clg.open(false)
 
-        if testIfKingUnderAttackAfterMove
-            # Test if king is under attack
-            pseudoThreatsOnPlayerAfterMove = move.newPosition._allPseudoMoveBitBoard()
-            kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[@turn]['k']
-            kingAttackBitBoard = CMGBitBoard.binAnd( kingBitBoard, pseudoThreatsOnPlayerAfterMove )
-            if not CMGBitBoard.binEqual(kingAttackBitBoard, [0, 0, 0, 0])
+        # console.log(@toString())
+        # console.log("Analyzing move " + move.toString())
+
+        if move.fromPiece.type is 'k'
+            clg.log('King move ' + move.toString())
+
+            # King is moved, test if king under attack after move
+            if move.newPosition._opponentKingAttacked() # opponent of new position, i.e. player of current position
                 return CMGPosition.PSEUDO_ONLY
+
+        else if move.isEnPassant()
+            clg.log('En passant move ' + move.toString())
+
+            # Subsequent protection tests won't work. Test if king under attack after move
+            if move.newPosition._opponentKingAttacked() # opponent of new position, i.e. player of current position
+                return CMGPosition.PSEUDO_ONLY
+
+        else if not CMGBitBoard.boolNand( @bitBoards.allPiecesOfColorAndType[@turn]['k'], @_pseudoThreatsOnPlayerBeforeMove() )
+
+            clg.log('king attacked before move ' + move.toString())
+            # King was under attack before move, test if king protected by landing square
+            if not @_attackedKingProtectedByTargetSquareOfNonKingMove(move)
+                return CMGPosition.PSEUDO_ONLY
+
+        else
+            clg.log('king NOT attacked before move ' + move.toString())
+
+            # King was not under attack before move, test if king was protected by piece before move
+            if @_kingProtectedByOriginatingSquareOfNonKingMove(move)
+                clg.log("King is protected by square #{move.fromSquare}")
+
+                # King may still be protected after move
+                if not @_attackedKingProtectedByTargetSquareOfNonKingMove(move)
+                    return CMGPosition.PSEUDO_ONLY
 
         # Test if castling is allowed: the king may not be under chess before move, and it may not cross a field that is under chess
         if move.fromPiece.type is 'k'
@@ -846,6 +918,12 @@ class CMGMove
         @newPosition
 
     setNewPositionObject: (@newPosition) ->
+
+    isEnPassant: () ->
+        if @takenPiece is false
+            return false
+
+        return ( @takenOnSquare isnt @toSquare )
 
 # =============================================================================
 
