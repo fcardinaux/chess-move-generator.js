@@ -560,11 +560,12 @@ class CMGPosition
                         takenOnSquare = target
                     else if piece.type is 'p' and parseInt(target) is @enPassantSquare
                         # Still need to verify if taken 'en passant':
-                        switch @enPassantSquare - parseInt(squareKey)
-                            when -9 then takenOnSquare = squareKey - 1
-                            when -7 then takenOnSquare = squareKey + 1
-                            when  7 then takenOnSquare = squareKey - 1
-                            when  9 then takenOnSquare = squareKey + 1
+                        iSquareKey = parseInt(squareKey)
+                        switch @enPassantSquare - iSquareKey
+                            when -9 then takenOnSquare = iSquareKey - 1
+                            when -7 then takenOnSquare = iSquareKey + 1
+                            when  7 then takenOnSquare = iSquareKey - 1
+                            when  9 then takenOnSquare = iSquareKey + 1
                         if takenOnSquare
                             takenPiece = @_getPieceOnSquare(takenOnSquare)
 
@@ -754,12 +755,9 @@ class CMGPosition
             return CMGPosition.PSEUDO_ONLY
 
         val = false
-        if @toString() is "Rr2k2r/8/8/8/8/8/8/4K2R b - - 1 1" and move.fromSquare is '57'
+        if @toString() is "r4rk1/p1ppqpb1/bn2pnp1/3PN3/1pP1P3/5Q1p/PP1BBPPP/RN2K2R b KQ c3 0 2" and move.fromSquare is '25' and move.toSquare is '18'
             val = true
         clg.open(false)
-
-        # console.log(@toString())
-        # console.log("Analyzing move " + move.toString())
 
         if move.fromPiece.type is 'k'
             clg.log('King move ' + move.toString())
@@ -920,6 +918,7 @@ class CMGMove
     setNewPositionObject: (@newPosition) ->
 
     isEnPassant: () ->
+        clg.log('Taken piece is ' + @takenPiece + ' on square ' + @takenOnSquare)
         if @takenPiece is false
             return false
 

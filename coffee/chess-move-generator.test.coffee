@@ -32,7 +32,7 @@ DO_ELEMENTARY_TESTS = true
 DO_POSSIBLE_MOVE_TEST = true
 DO_DIVISION_TEST = false
 DO_PERFTSUITE = true
-DEPTH = 3
+DEPTH = 4
 
 LOG_MOVE_TEST = (x) ->
     # console.log(x)
