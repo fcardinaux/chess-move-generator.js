@@ -21,13 +21,13 @@ Profiling:
 */
 var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG_DIVISION_TEST, LOG_MOVE_TEST, LOG_PERFTSUITE, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
 
-DO_ELEMENTARY_TESTS = false;
+DO_ELEMENTARY_TESTS = true;
 
-DO_POSSIBLE_MOVE_TEST = false;
+DO_POSSIBLE_MOVE_TEST = true;
 
-DO_DIVISION_TEST = true;
+DO_DIVISION_TEST = false;
 
-DO_PERFTSUITE = false;
+DO_PERFTSUITE = true;
 
 DEPTH = 4;
 
