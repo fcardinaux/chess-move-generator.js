@@ -120,6 +120,22 @@ case $compressor in
         ;;
 esac
 
+# =============================================================================
+
+case $unit_test in
+    "no")
+        cd javascript/
+        # Strict mode (https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Functions_and_function_scope/Strict_mode)
+        echo '"use strict"' | cat - chess-move-generator.js > temp && mv temp chess-move-generator.js
+        cd ..
+        ;;
+    "yes")
+        # No strict mode because we use arguments.callee (http://stackoverflow.com/a/7497112)
+        ;;
+esac
+
+# =============================================================================
+
 case $prepend_header in
     "no")
         ;;

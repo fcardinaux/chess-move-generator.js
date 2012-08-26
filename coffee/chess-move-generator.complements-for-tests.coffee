@@ -6,6 +6,67 @@ Chess Move Generator - Complements for Tests
 Licence: see README.md
 ###
 
+# =============================================================================
+# http://helephant.com/2007/05/12/diy-javascript-stack-trace/
+
+Function::trace = () ->
+    trace = []
+    current = this
+    while current
+        trace.push(current.signature())
+        current = current.caller
+    return trace
+
+Function::signature = () ->
+    ftostring = () ->
+        params = ""
+        if @params.length > 0
+            params = "'" + @params.join("', '") + "'"
+        return @name + "(" + params + ")"
+
+    signature =
+        name: @getName(),
+        params: [],
+        toString: ftostring
+    if @arguments
+        for x in [0..(arguments.length - 1)]
+            signature.params.push(@arguments[x])
+
+    return signature
+
+Function::getName = () ->
+    if @name
+        return @name
+    definition = @toString().split("\n")[0]
+    exp = /^function ([^\s(]+).+/
+    if(exp.test(definition))
+        return definition.split("\n")[0].replace(exp, "$1") || "anonymous"
+    return "anonymous"
+
+# =============================================================================
+
+class profiler
+    @threshhold: 100000
+    @pile: []
+    @open: (name) ->
+        description =
+            start: new Date().getTime(),
+            name: name
+        @pile.push(description)
+
+    @close: () ->
+        description = @pile.pop()
+        duration = new Date().getTime() - description.start
+        if duration < @threshhold
+            return false
+
+        indent = ""
+        for i in [1..@pile.length]
+            indent = indent + "    "
+        console.log(indent + description.name + ': ' + duration)
+
+# =============================================================================
+
 class clg
     @opened: false
 

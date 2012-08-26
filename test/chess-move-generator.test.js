@@ -19,19 +19,23 @@ Profiling:
         sudo dtrace -n 'profile-97/pid == 1851 && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
         stackvis dtrace flamegraph-svg < stacks.out > stacks.svg
 */
-var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG_MOVE_TEST, LOG_PERFTSUITE, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
+var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG_DIVISION_TEST, LOG_MOVE_TEST, LOG_PERFTSUITE, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
 
 DO_ELEMENTARY_TESTS = true;
 
 DO_POSSIBLE_MOVE_TEST = true;
 
-DO_DIVISION_TEST = false;
+DO_DIVISION_TEST = true;
 
-DO_PERFTSUITE = true;
+DO_PERFTSUITE = false;
 
-DEPTH = 3;
+DEPTH = 2;
 
 LOG_MOVE_TEST = function(x) {};
+
+LOG_DIVISION_TEST = function(x) {
+  return console.log(x);
+};
 
 LOG_PERFTSUITE = function(x) {
   return console.log(x);
@@ -63,7 +67,7 @@ testDepth = function(positionObj, counters, currentDepth, maxDepth, log) {
   for (moveId = 0, _len = moves.length; moveId < _len; moveId++) {
     move = moves[moveId];
     if (log) {
-      LOG_PERFTSUITE("  * testing move " + (moveId + 1) + " of " + moveQuantity);
+      LOG_PERFTSUITE("  * testing move " + (moveId + 1) + " of " + moveQuantity + " (" + (move.toString()) + ")");
     }
     pos = move.getNewPosition().clone(true);
     testDepth(pos, counters, currentDepth, maxDepth);
@@ -218,350 +222,32 @@ module.exports = {
     return _results;
   },
   'test division': function(beforeExit, assert) {
-    var calculatedMoveObj, calculatedMoveString, calculatedMoves, calculatedQuantity, counters, depth, expectedData, expectedMove, expectedQuantity, newDepth, position, positionString, testVector, _i, _j, _len, _len2, _ref, _ref2, _results;
+    var calculatedMoveObj, calculatedMoveString, calculatedMoves, calculatedQuantity, counters, depth, expectedData, expectedMove, expectedQuantity, moveCount, moveId, newDepth, position, positionString, testVector, _i, _j, _len, _len2, _ref, _ref2, _results;
     if (!DO_DIVISION_TEST) return;
-    testVector = [
-      [
-        "r3k2r/p1p1qNb1/bn1ppnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 0 1", 1, {
-          "e8g8": 1,
-          "e8f8": 1,
-          "e8d7": 1,
-          "e8f7": 1,
-          "c7c6": 1,
-          "c7c5": 1,
-          "e6e5": 1,
-          "e6d5": 1,
-          "g6g5": 1,
-          "b4b3": 1,
-          "b4c3": 1,
-          "h3g2": 1,
-          "a8b8": 1,
-          "a8c8": 1,
-          "a8d8": 1,
-          "h8g8": 1,
-          "h8f8": 1,
-          "h8h7": 1,
-          "h8h6": 1,
-          "h8h5": 1,
-          "h8h4": 1,
-          "e7f7": 1,
-          "e7d7": 1,
-          "e7f8": 1,
-          "e7d8": 1,
-          "g7h6": 1,
-          "g7f8": 1,
-          "a6b7": 1,
-          "a6c8": 1,
-          "a6b5": 1,
-          "a6c4": 1,
-          "a6d3": 1,
-          "a6e2": 1,
-          "b6a4": 1,
-          "b6c8": 1,
-          "b6d7": 1,
-          "b6d5": 1,
-          "b6c4": 1,
-          "f6e4": 1,
-          "f6g8": 1,
-          "f6d5": 1,
-          "f6h7": 1,
-          "f6h5": 1,
-          "f6d7": 1,
-          "f6g4": 1
-        }
-      ], [
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 1 1", 1, {
-          "e8g8": 1,
-          "e8c8": 1,
-          "e8f8": 1,
-          "e8d8": 1,
-          "c7c6": 1,
-          "c7c5": 1,
-          "d7d6": 1,
-          "e6d5": 1,
-          "g6g5": 1,
-          "b4b3": 1,
-          "b4a3": 1,
-          "b4c3": 1,
-          "h3g2": 1,
-          "a8b8": 1,
-          "a8c8": 1,
-          "a8d8": 1,
-          "h8g8": 1,
-          "h8f8": 1,
-          "h8h7": 1,
-          "h8h6": 1,
-          "h8h5": 1,
-          "h8h4": 1,
-          "e7d6": 1,
-          "e7c5": 1,
-          "e7f8": 1,
-          "e7d8": 1,
-          "g7h6": 1,
-          "g7f8": 1,
-          "a6b7": 1,
-          "a6c8": 1,
-          "a6b5": 1,
-          "a6c4": 1,
-          "a6d3": 1,
-          "a6e2": 1,
-          "b6a4": 1,
-          "b6c8": 1,
-          "b6d5": 1,
-          "b6c4": 1,
-          "f6e4": 1,
-          "f6g8": 1,
-          "f6d5": 1,
-          "f6h7": 1,
-          "f6h5": 1,
-          "f6g4": 1
-        }
-      ], [
-        "r3k2r/p1p1qpb1/bn1ppnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 w kq - 0 2", 2, {
-          "g1h1": 44,
-          "d5e6": 46,
-          "a2a3": 45,
-          "a2a4": 45,
-          "b2b3": 43,
-          "g2g3": 43,
-          "g2g4": 43,
-          "g2h3": 44,
-          "e5d3": 44,
-          "e5f7": 45,
-          "e5c4": 43,
-          "e5g6": 43,
-          "e5g4": 45,
-          "e5c6": 41,
-          "e5d7": 43,
-          "c3b1": 43,
-          "c3a4": 43,
-          "c3d1": 43,
-          "c3b5": 40,
-          "f3g3": 44,
-          "f3h3": 44,
-          "f3e3": 44,
-          "f3d3": 43,
-          "f3g4": 44,
-          "f3h5": 44,
-          "f3f4": 44,
-          "f3f5": 46,
-          "f3f6": 39,
-          "d2c1": 44,
-          "d2e3": 44,
-          "d2f4": 44,
-          "d2g5": 43,
-          "d2h6": 42,
-          "d2e1": 44,
-          "e2d1": 45,
-          "e2d3": 43,
-          "e2c4": 42,
-          "e2b5": 7,
-          "e2a6": 37,
-          "a1b1": 44,
-          "a1c1": 44,
-          "a1d1": 44,
-          "a1e1": 44,
-          "f1e1": 44,
-          "f1d1": 44,
-          "f1c1": 44,
-          "f1b1": 44
-        }
-      ], [
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 1 1", 3, {
-          "e8g8": 1899,
-          "e8c8": 1962,
-          "e8f8": 1872,
-          "e8d8": 1913,
-          "c7c6": 2080,
-          "c7c5": 1984,
-          "d7d6": 2005,
-          "e6d5": 2086,
-          "g6g5": 1995,
-          "b4b3": 2174,
-          "b4c3": 2123,
-          "h3g2": 2248,
-          "a8b8": 2089,
-          "a8c8": 1946,
-          "a8d8": 1948,
-          "h8g8": 1802,
-          "h8f8": 1708,
-          "h8h7": 1897,
-          "h8h6": 1896,
-          "h8h5": 2040,
-          "h8h4": 2078,
-          "e7d6": 2109,
-          "e7c5": 2412,
-          "e7f8": 1889,
-          "e7d8": 1894,
-          "g7h6": 2072,
-          "g7f8": 1849,
-          "a6b7": 2056,
-          "a6c8": 1770,
-          "a6b5": 2091,
-          "a6c4": 2049,
-          "a6d3": 2038,
-          "a6e2": 2057,
-          "b6a4": 1989,
-          "b6c8": 1753,
-          "b6d5": 1937,
-          "b6c4": 2003,
-          "f6e4": 2566,
-          "f6g8": 2049,
-          "f6d5": 2185,
-          "f6h7": 2048,
-          "f6h5": 2142,
-          "f6g4": 2272
-        }
-      ], [
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 4, {
-          "e1g1": 86975,
-          "e1c1": 79803,
-          "e1f1": 77887,
-          "e1d1": 79989,
-          "d5d6": 79551,
-          "d5e6": 97464,
-          "a2a3": 94405,
-          "a2a4": 90978,
-          "b2b3": 81066,
-          "g2g3": 77468,
-          "g2g4": 75677,
-          "g2h3": 82759,
-          "e5d3": 77431,
-          "e5f7": 88799,
-          "e5c4": 77752,
-          "e5g6": 83866,
-          "e5g4": 79912,
-          "e5c6": 83885,
-          "e5d7": 93913,
-          "c3b1": 84773,
-          "c3a4": 91447,
-          "c3d1": 84782,
-          "c3b5": 81498,
-          "f3g3": 94461,
-          "f3h3": 98524,
-          "f3e3": 92505,
-          "f3d3": 83727,
-          "f3g4": 92037,
-          "f3h5": 95034,
-          "f3f4": 90488,
-          "f3f5": 104992,
-          "f3f6": 77838,
-          "d2c1": 83037,
-          "d2e3": 90274,
-          "d2f4": 84869,
-          "d2g5": 87951,
-          "d2h6": 82323,
-          "e2d1": 74963,
-          "e2f1": 88728,
-          "e2d3": 85119,
-          "e2c4": 84835,
-          "e2b5": 79739,
-          "e2a6": 69334,
-          "a1b1": 83348,
-          "a1c1": 83263,
-          "a1d1": 79695,
-          "h1g1": 84876,
-          "h1f1": 81563
-        }
-      ], [
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", 2, {
-          "e1g1": 43,
-          "e1c1": 43,
-          "e1f1": 43,
-          "e1d1": 43,
-          "d5d6": 41,
-          "d5e6": 46,
-          "a2a3": 44,
-          "a2a4": 44,
-          "b2b3": 42,
-          "g2g3": 42,
-          "g2g4": 42,
-          "g2h3": 43,
-          "e5d3": 43,
-          "e5f7": 44,
-          "e5c4": 42,
-          "e5g6": 42,
-          "e5g4": 44,
-          "e5c6": 41,
-          "e5d7": 45,
-          "c3b1": 42,
-          "c3a4": 42,
-          "c3d1": 42,
-          "c3b5": 39,
-          "f3g3": 43,
-          "f3h3": 43,
-          "f3e3": 43,
-          "f3d3": 42,
-          "f3g4": 43,
-          "f3h5": 43,
-          "f3f4": 43,
-          "f3f5": 45,
-          "f3f6": 39,
-          "d2c1": 43,
-          "d2e3": 43,
-          "d2f4": 43,
-          "d2g5": 42,
-          "d2h6": 41,
-          "e2d1": 44,
-          "e2f1": 44,
-          "e2d3": 42,
-          "e2c4": 41,
-          "e2b5": 39,
-          "e2a6": 36,
-          "a1b1": 43,
-          "a1c1": 43,
-          "a1d1": 43,
-          "h1g1": 43,
-          "h1f1": 43
-        }
-      ], [
-        "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", 2, {
-          "e1g1": 23,
-          "e1c1": 23,
-          "e1f1": 26,
-          "e1d1": 26,
-          "e1e2": 26,
-          "e1f2": 26,
-          "e1d2": 26,
-          "a1b1": 26,
-          "a1c1": 25,
-          "a1d1": 23,
-          "a1a2": 25,
-          "a1a3": 24,
-          "a1a4": 23,
-          "a1a5": 22,
-          "a1a6": 21,
-          "a1a7": 17,
-          "a1a8": 3,
-          "h1g1": 25,
-          "h1f1": 23,
-          "h1h2": 25,
-          "h1h3": 24,
-          "h1h4": 23,
-          "h1h5": 22,
-          "h1h6": 21,
-          "h1h7": 17,
-          "h1h8": 3
-        }
-      ]
-    ];
+    testVector = require("../test-data/division-test");
     _results = [];
     for (_i = 0, _len = testVector.length; _i < _len; _i++) {
       _ref = testVector[_i], positionString = _ref[0], depth = _ref[1], expectedData = _ref[2];
+      LOG_DIVISION_TEST("Verifying \"" + positionString + "\":");
       position = positionClass.fromString(positionString);
       calculatedMoves = {};
+      moveCount = 0;
       _ref2 = position.allPossibleMoves();
       for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
         calculatedMoveObj = _ref2[_j];
         calculatedMoveString = calculatedMoveObj.toString();
         assert.isDefined(expectedData[calculatedMoveString], "Unexpected move " + calculatedMoveString + " from position " + positionString);
         calculatedMoves[calculatedMoveString] = calculatedMoveObj;
+        moveCount++;
       }
+      moveId = 0;
       _results.push((function() {
         var _results2;
         _results2 = [];
         for (expectedMove in expectedData) {
           expectedQuantity = expectedData[expectedMove];
+          moveId++;
+          LOG_DIVISION_TEST("  * move " + moveId + " of " + moveCount + " (" + (expectedMove.toString()) + ")");
           assert.isDefined(calculatedMoves[expectedMove], "Uncalculated move " + expectedMove + " from position " + positionString);
           if (depth === 1) continue;
           newDepth = depth - 1;
