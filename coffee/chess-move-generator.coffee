@@ -482,6 +482,7 @@ class CMGPosition
             @lazy['pmv'] = [] # Pseudo-move array
             @lazy['pmvs'] = {} # Pseudo-move arrays, one element for each of player's piece
             @lazy['pmvbb'] = [0, 0, 0, 0] # Pseudo-move bitboard
+            @lazy['pqrbmvbb'] = [0, 0, 0, 0] # Pseudo-move of queens, rooks and bishops bitboard
 
             opponent = @opponentColorCode()
             for squareKey, piece of @piecesOfColor[@turn]
@@ -491,6 +492,9 @@ class CMGPosition
                 pseudoMoveBitBoard = @_bitBoardOfPseudoMovesFromSquare(squareKey, piece, @turn, opponent)
 
                 @lazy['pmvbb'] = CMGBitBoard.binOr( @lazy['pmvbb'], pseudoMoveBitBoard )
+
+                if piece.type is 'b' or piece.type is 'r' or piece.type is 'q'
+                    @lazy['pqrbmvbb'] = CMGBitBoard.binOr( @lazy['pqrbmvbb'], pseudoMoveBitBoard )
 
                 # Second, convert the move bitboard into a move array, and execute promotion if required
                 targets = CMGBitBoard.bitBoardToSquareKeyArray( pseudoMoveBitBoard )
@@ -543,6 +547,11 @@ class CMGPosition
             @_allPseudoMoves()
         return @lazy['pmvbb']
 
+    _allPseudoQRBMoveBitBoard: () ->
+        if not @lazy.hasOwnProperty('pqrbmvbb')
+            @_allPseudoMoves()
+        return @lazy['pqrbmvbb']
+
     _castlingPossibleOnSide: (castlingSide) ->
         if not @lazy.hasOwnProperty('pks')
 
@@ -581,7 +590,14 @@ class CMGPosition
 
             @lazy['ptpbm'] = invPosition._allPseudoMoveBitBoard()
 
+            @lazy['ptfqrbpbm'] = invPosition._allPseudoQRBMoveBitBoard()
+
         return @lazy['ptpbm']
+
+    _pseudoThreatsFromQRBOnPlayerBeforeMove: () ->
+        if not @lazy.hasOwnProperty('ptfqrbpbm')
+            @_pseudoThreatsOnPlayerBeforeMove()
+        return @lazy['ptfqrbpbm']
 
     _bitBoardOfPseudoMovesFromSquare: (squareKey, movedPiece, stopAtColor = false, stopAfterColor = false) ->
         out = [0, 0, 0, 0]
@@ -684,12 +700,26 @@ class CMGPosition
             # A taking move with a pawn, but no piece has been taken
             return CMGPosition.PSEUDO_ONLY
 
-        # Test if king is under attack
-        pseudoThreatsOnPlayerAfterMove = move.newPosition._allPseudoMoveBitBoard()
-        kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[@turn]['k']
-        kingAttackBitBoard = CMGBitBoard.binAnd( kingBitBoard, pseudoThreatsOnPlayerAfterMove )
-        if not CMGBitBoard.binEqual(kingAttackBitBoard, [0, 0, 0, 0])
-            return CMGPosition.PSEUDO_ONLY
+        testIfKingUnderAttackAfterMove = false
+        if move.fromPiece.type is 'k'
+            # King is moved
+            testIfKingUnderAttackAfterMove = true
+        else if not CMGBitBoard.boolNand( @bitBoards.allPiecesOfColorAndType[@turn]['k'], @_pseudoThreatsOnPlayerBeforeMove() )
+            # King was under attack before move
+            testIfKingUnderAttackAfterMove = true
+        else
+            # Test if the moved piece was under attack from a queen, a rook or a bishop before moving, and therefore may have protected the king
+            [quadrant, value] = CMGBitBoard.quadrantAndValueOfSquare(move.fromSquare)
+            qrbTreats = @_pseudoThreatsFromQRBOnPlayerBeforeMove()
+            testIfKingUnderAttackAfterMove = 0 < (qrbTreats[quadrant] & value)
+
+        if testIfKingUnderAttackAfterMove
+            # Test if king is under attack
+            pseudoThreatsOnPlayerAfterMove = move.newPosition._allPseudoMoveBitBoard()
+            kingBitBoard = move.newPosition.bitBoards.allPiecesOfColorAndType[@turn]['k']
+            kingAttackBitBoard = CMGBitBoard.binAnd( kingBitBoard, pseudoThreatsOnPlayerAfterMove )
+            if not CMGBitBoard.binEqual(kingAttackBitBoard, [0, 0, 0, 0])
+                return CMGPosition.PSEUDO_ONLY
 
         # Test if castling is allowed: the king may not be under chess before move, and it may not cross a field that is under chess
         if move.fromPiece.type is 'k'

@@ -30,9 +30,9 @@ Profiling:
 # Set the performance test depth here
 DO_ELEMENTARY_TESTS = true
 DO_POSSIBLE_MOVE_TEST = true
-DO_DIVISION_TEST = true
-DO_PERFTSUITE = false
-DEPTH = 2
+DO_DIVISION_TEST = false
+DO_PERFTSUITE = true
+DEPTH = 3
 
 LOG_MOVE_TEST = (x) ->
     # console.log(x)

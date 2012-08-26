@@ -25,11 +25,11 @@ DO_ELEMENTARY_TESTS = true;
 
 DO_POSSIBLE_MOVE_TEST = true;
 
-DO_DIVISION_TEST = true;
+DO_DIVISION_TEST = false;
 
-DO_PERFTSUITE = false;
+DO_PERFTSUITE = true;
 
-DEPTH = 2;
+DEPTH = 3;
 
 LOG_MOVE_TEST = function(x) {};
 
