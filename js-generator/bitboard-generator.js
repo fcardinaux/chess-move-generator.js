@@ -87,6 +87,14 @@ Numbering of each bitboard quadrant (hexadecimal here):
 "Keys [of objects] can only be strings, and numeric keys such as those used in Arrays are coerced and stored as strings"
 (http://stackoverflow.com/a/6066954)
 
+Directions:
+
+* 0 = North
+* 1 = North-East
+* 2 = East
+* ...
+* 7 = North-West
+
 Todos
 =====
 

@@ -285,6 +285,33 @@ class CMGPosition
             when "w" then return "b"
         defaultValue
 
+    @_direction: (arrowFrom, arrowTo) ->
+        arrowTo = parseInt(arrowTo)
+        arrowFrom = parseInt(arrowFrom)
+        delta = arrowTo - arrowFrom
+        return false if delta is 0
+        absDelta = Math.abs(delta)
+
+        clg.log(arrowTo)
+        clg.log(arrowFrom)
+        clg.log(delta)
+        clg.log(absDelta)
+
+        if absDelta % 8 is 0 # Same column
+            return 0 if delta > 0
+            return 4
+        else if absDelta % 9 is 0 # Same diagonal NE - SW
+            return 1 if delta > 0
+            return 5
+        else if Math.floor(arrowFrom / 8) is Math.floor(arrowTo / 8) # Same row
+            return 2 if delta > 0
+            return 6
+        else if absDelta % 7 is 0 # Same diagonal NW - SE
+            return 7 if delta > 0
+            return 3
+
+        return false
+
     # -------------------------------------------------------------------------
     # Constructor
 
@@ -299,6 +326,8 @@ class CMGPosition
         @param moveNumber (integer)
         ###
 
+        @kingSquare = false
+
         @piecesOfColor = {}
         @piecesOfColor['b'] = {}
         @piecesOfColor['w'] = {}
@@ -308,6 +337,8 @@ class CMGPosition
 
             for squareId, piece of @pieces
                 @piecesOfColor[piece.color][squareId] = piece
+                if piece.color is @turn and piece.type is 'k'
+                    @kingSquare = squareId
 
         @bitBoards = {}
         @_generateBitBoards()
@@ -350,7 +381,7 @@ class CMGPosition
         # todo implement... with @_isValidMoveObject()?
         true
 
-    allPossibleMovesFromSquare: (squareKey, piece = null) ->
+    allPossibleMovesFrom: (squareKey, piece = null) ->
         squareKey = CMGUtil.toString(squareKey)
 
         if not piece
@@ -380,7 +411,7 @@ class CMGPosition
         for square, piece of @pieces
             if piece.color isnt @turn
                 continue
-            moves = @allPossibleMovesFromSquare(square, piece)
+            moves = @allPossibleMovesFrom(square, piece)
             if moves.length > 0
                 result = result.concat(moves)
 
@@ -407,7 +438,7 @@ class CMGPosition
         opponentKingBitBoard = @bitBoards.allPiecesOfColorAndType[@opponentColorCode()]['k']
         return not CMGBitBoard.boolNand( opponentKingBitBoard, @_allPseudoMoveBitBoard() )
 
-    _kingProtectedByOriginatingSquareOfNonKingMove: (move) ->
+    _directionOfKingProtectionByOriginatingSquareOfNonKingMove: (move) ->
         if not @lazy.hasOwnProperty('kprot1')
             @lazy['kprot1'] = {}
 
@@ -424,6 +455,7 @@ class CMGPosition
             clg.log("d7 attacked by qrb: " + squareAttackedByQRB)
 
             if squareAttackedByQRB
+                clg.log('squareAttackedByQRB')
 
                 # What if the square were empty
                 pieces = CMGUtil.cloneObject( @pieces )
@@ -433,7 +465,11 @@ class CMGPosition
                 altPosition.enPassantSquare = false
                 altPosition.allowedCastling = false # Avoid unnecessary evaluations
 
-                @lazy['kprot1'][squareKey] = not CMGBitBoard.boolNand( @bitBoards.allPiecesOfColorAndType[@turn]['k'], altPosition._allPseudoMoveBitBoard() )
+                @lazy['kprot1'][squareKey] = false
+                if not CMGBitBoard.boolNand( @bitBoards.allPiecesOfColorAndType[@turn]['k'], altPosition._allPseudoMoveBitBoard() )
+                    clg.log('hic')
+                    @lazy['kprot1'][squareKey] = CMGPosition._direction(move.fromSquare, @kingSquare)
+                    clg.log('direction is ' + @lazy['kprot1'][squareKey])
             else
                 @lazy['kprot1'][squareKey] = false
 
@@ -444,11 +480,14 @@ class CMGPosition
             @lazy['kprot2'] = {}
 
         squareKey = '' + move.toSquare
+        clg.log("Move to #{squareKey}")
         if not @lazy['kprot2'].hasOwnProperty(squareKey)
 
-            # Here, we assume the king is attacked before the move, or that it was protected by the moved piece
-            # We also assume the move is not "en passant"
+            # Here, we assume the king is attacked before the move, or that it was protected by the moved piece before it moved.
+            # We also assume the move is not a pawn taking another "en passant".
+            # All these conditions are assumed to be valid when this function is called.
 
+            clg.log(move.newPosition.toString())
             # Test if king under attack after sample protecting move
             @lazy['kprot2'][squareKey] = not move.newPosition._opponentKingAttacked() # opponent of new position, i.e. player of current position
 
@@ -755,7 +794,7 @@ class CMGPosition
             return CMGPosition.PSEUDO_ONLY
 
         val = false
-        if @toString() is "r4rk1/p1ppqpb1/bn2pnp1/3PN3/1pP1P3/5Q1p/PP1BBPPP/RN2K2R b KQ c3 0 2" and move.fromSquare is '25' and move.toSquare is '18'
+        if @toString() is "r3k2r/p1pp1pb1/bn2pnp1/2qPN3/4P3/1PN2Q1p/PP1BBPPP/2KR3R w kq - 1 3" and move.fromSquare is '18' and move.toSquare is '1'
             val = true
         clg.open(false)
 
@@ -784,11 +823,23 @@ class CMGPosition
             clg.log('king NOT attacked before move ' + move.toString())
 
             # King was not under attack before move, test if king was protected by piece before move
-            if @_kingProtectedByOriginatingSquareOfNonKingMove(move)
-                clg.log("King is protected by square #{move.fromSquare}")
+            protectionDirection = @_directionOfKingProtectionByOriginatingSquareOfNonKingMove(move)
+            clg.log("Protection direction is " + protectionDirection)
+            if protectionDirection isnt false
+                clg.log("King is protected by square #{move.fromSquare} in direction #{protectionDirection}")
 
-                # King may still be protected after move
-                if not @_attackedKingProtectedByTargetSquareOfNonKingMove(move)
+                # King may still be protected after move, if move is along protection direction
+                testMoveDirection = true
+                switch move.fromPiece.type
+                    when 'n' then testMoveDirection = false
+                    when 'b' then testMoveDirection = ( protectionDirection % 2 isnt 0 )
+                    when 'r' then testMoveDirection = ( protectionDirection % 2 is 0 )
+                moveDirection = false
+                if testMoveDirection
+                    moveDirection = CMGPosition._direction(move.fromSquare, move.toSquare) # False if not along one of the 8 directions, e.g. for knights
+                clg.log("Move direction is " + moveDirection)
+                if ( moveDirection is false ) or ( Math.abs(moveDirection - protectionDirection) % 4 isnt 0 )
+                    clg.log('King no longer protected after move')
                     return CMGPosition.PSEUDO_ONLY
 
         # Test if castling is allowed: the king may not be under chess before move, and it may not cross a field that is under chess
@@ -1011,7 +1062,7 @@ NoCompile.position.prototype['playerColorCode'] = CMGPosition.prototype.playerCo
 NoCompile.position.prototype['opponentColorCode'] = CMGPosition.prototype.opponentColorCode
 NoCompile.position.prototype['toString'] = CMGPosition.prototype.toString
 NoCompile.position.prototype['toStringWithoutCounters'] = CMGPosition.prototype.toStringWithoutCounters
-NoCompile.position.prototype['allPossibleMovesFromSquare'] = CMGPosition.prototype.allPossibleMovesFromSquare
+NoCompile.position.prototype['allPossibleMovesFrom'] = CMGPosition.prototype.allPossibleMovesFrom
 NoCompile.position.prototype['allPossibleMoves'] = CMGPosition.prototype.allPossibleMoves
 NoCompile.position.prototype['isDraw'] = CMGPosition.prototype.isDraw
 NoCompile.position.prototype['getWinnerColorCode'] = CMGPosition.prototype.getWinnerColorCode

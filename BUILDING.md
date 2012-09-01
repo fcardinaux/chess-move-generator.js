@@ -13,7 +13,7 @@ Installation of the necessary software
 
 Expresso for unit tests:
 
-    cd ~/Giga/chess-move-generator.js/
+    cd ~/DevNodeJs/chess-move-generator.js/
     sudo npm install expresso
 
 How to build the javascript
