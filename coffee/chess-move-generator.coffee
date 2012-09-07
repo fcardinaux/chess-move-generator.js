@@ -289,11 +289,9 @@ class CMGPosition
         clg.log([b_0x88, a_0x88, delta])
 
         if absDelta < 8 # Same row
-            clg.log('gege')
             return [2, absDelta] if delta > 0
             return [6, absDelta]
         else if absDelta % 16 is 0 # Same column
-            clg.log('gaga')
             return [0, absDelta] if delta > 0
             return [4, absDelta]
         else if absDelta % 17 is 0 # Same diagonal NE - SW

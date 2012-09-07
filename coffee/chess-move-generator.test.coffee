@@ -32,7 +32,7 @@ DO_ELEMENTARY_TESTS = false
 DO_POSSIBLE_MOVE_TEST = false
 DO_DIVISION_TEST = false
 DO_PERFTSUITE = true
-DEPTH = 6
+DEPTH = 5
 
 LOG_ELEMENTARY_TEST = (x) ->
     # console.log(x)
@@ -80,7 +80,6 @@ testDepth = (positionObj, counters, currentDepth, maxDepth, logFunction = false)
         delete move
         pos = null
         delete pos
-        logFunction('gaga') if logFunction
 
     # Avoid too many allocations
     moves = null
