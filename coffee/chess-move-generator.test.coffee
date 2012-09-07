@@ -30,9 +30,12 @@ Profiling:
 # Set the performance test depth here
 DO_ELEMENTARY_TESTS = false
 DO_POSSIBLE_MOVE_TEST = false
-DO_DIVISION_TEST = true
-DO_PERFTSUITE = false
-DEPTH = 5
+DO_DIVISION_TEST = false
+DO_PERFTSUITE = true
+DEPTH = 6
+
+LOG_ELEMENTARY_TEST = (x) ->
+    # console.log(x)
 
 LOG_MOVE_TEST = (x) ->
     # console.log(x)
@@ -48,6 +51,7 @@ LOG_PERFTSUITE = (x) ->
 chessMoveGenerator = require('../javascript/chess-move-generator')
 positionClass = chessMoveGenerator.position
 bitBoardClass = chessMoveGenerator.bitBoard
+utilityClass  = chessMoveGenerator.utility
 
 # =============================================================================
 
@@ -57,7 +61,7 @@ getInitialCounterArray = (maxDepth) ->
         counters.push(0)
     counters
 
-testDepth = (positionObj, counters, currentDepth, maxDepth, log = false) ->
+testDepth = (positionObj, counters, currentDepth, maxDepth, logFunction = false) ->
 
     moves = positionObj.allPossibleMoves()
     moveQuantity = moves.length
@@ -69,13 +73,14 @@ testDepth = (positionObj, counters, currentDepth, maxDepth, log = false) ->
         return true
 
     for move, moveId in moves
-        LOG_PERFTSUITE("  * testing move #{(moveId+1)} of #{moveQuantity} (#{move.toString()})") if log
+        logFunction("  * testing move #{(moveId+1)} of #{moveQuantity} (#{move.toString()})") if logFunction
         pos = move.getNewPosition().clone(false, true) # With the lazy object
         testDepth(pos, counters, currentDepth, maxDepth)
         move = null
         delete move
         pos = null
         delete pos
+        logFunction('gaga') if logFunction
 
     # Avoid too many allocations
     moves = null
@@ -114,6 +119,8 @@ module.exports =
         if not DO_ELEMENTARY_TESTS
             return
 
+        LOG_ELEMENTARY_TEST('Testing bitboard values of squares')
+
         assert.eql([   0x0, 0x8000,    0x0,    0x0], bitBoardClass.valueOfSquare(31))
 
         assert.eql([   0x1,    0x0,    0x0,    0x0], bitBoardClass.valueOfSquare(0))
@@ -130,6 +137,8 @@ module.exports =
 
         if not DO_ELEMENTARY_TESTS
             return
+
+        LOG_ELEMENTARY_TEST('Testing string to and from position object')
 
         positionStrings = [
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -151,14 +160,16 @@ module.exports =
         ]
         for positionString in positionStrings
             posObj = positionClass.fromString(positionString)
-            # assert.eql(true, (posObj instanceof positionClass))
-            # newPositionString = posObj.toString()
-            # assert.eql(positionString, newPositionString)
+            assert.eql(true, (posObj instanceof positionClass))
+            newPositionString = posObj.toString()
+            assert.eql(positionString, newPositionString)
 
     'test CMGPosition#_allowedCastlingValueToString': (beforeExit, assert) ->
 
         if not DO_ELEMENTARY_TESTS
             return
+
+        LOG_ELEMENTARY_TEST('Testing allowed castling values to string')
 
         assert.eql("KQkq",  positionClass._allowedCastlingValueToString(15))
         assert.eql("KQk",   positionClass._allowedCastlingValueToString(14))
@@ -182,6 +193,8 @@ module.exports =
         if not DO_ELEMENTARY_TESTS
             return
 
+        LOG_ELEMENTARY_TEST('Testing allowed castling values from string')
+
         assert.eql(15,      positionClass._allowedCastlingStringToValue("KQkq"))
         assert.eql(14,      positionClass._allowedCastlingStringToValue("KQk"))
         assert.eql(13,      positionClass._allowedCastlingStringToValue("KQq"))
@@ -204,6 +217,8 @@ module.exports =
         if not DO_ELEMENTARY_TESTS
             return
 
+        LOG_ELEMENTARY_TEST('Testing player color code')
+
         testData = [
             ['w', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
             ['b', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"],
@@ -219,6 +234,8 @@ module.exports =
         if not DO_ELEMENTARY_TESTS
             return
 
+        LOG_ELEMENTARY_TEST('Testing opponent color code')
+
         testData = [
             ['b', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"],
             ['w', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"],
@@ -229,293 +246,29 @@ module.exports =
             positionObj = positionClass.fromString(positionString)
             assert.eql(colorCode, positionObj.opponentColorCode())
 
+    'test CMGUtil#0x88representation': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
+        LOG_ELEMENTARY_TEST('Testing square key conversion to and from 0x88 representation')
+
+        square0x88values  = [0,   1,   2,   3,   4,   5,   6,   7,  16,  17,  18,  19,  20,  21,  22,  23,  32,  33,  34,  35,  36,  37,  38,  39,  48,  49,  50,  51,  52,  53,  54,  55,  64,  65,  66,  67,  68,  69,  70,  71,  80,  81,  82,  83,  84,  85,  86,  87,  96,  97,  98,  99, 100, 101, 102, 103, 112, 113, 114, 115, 116, 117, 118, 119]
+
+        for squareKey in [0..63]
+            square0x88value = utilityClass.to0x88representation(squareKey)
+            assert.eql(square0x88value, square0x88values[squareKey], "0x88 representation of #{squareKey} should be #{square0x88values[squareKey]} and not #{square0x88value}.")
+            returnedKey     = utilityClass.from0x88representation(square0x88value)
+            assert.eql(squareKey, returnedKey, "Square key of #{squareKey} has 0x88 representation #{square0x88value}, which is incorrectly converted back to #{returnedKey}.")
+
     'test CMGPosition#allPossibleMoves': (beforeExit, assert) ->
 
         if not DO_POSSIBLE_MOVE_TEST
             return
 
-        testVector = [
-            [
-                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 1 1",
-              # /2kr3r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2/
-                [
-                    "r4rk1/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2",
-                    "2kr3r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2",
-                    "r4k1r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2",
-                    "r2k3r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2",
-                    "r3k2r/p2pqpb1/bnp1pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p2pqpb1/bn2pnp1/2pPN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq c6 0 2",
-                    "r3k2r/p1p1qpb1/bn1ppnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn3np1/3pN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn2pn2/3PN1p1/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/P3P3/1pN2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/p1N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", # en passant
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/P3P3/2p2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q2/1PPBBPpP/R3K2R w KQkq - 0 2",
-                    "1r2k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQk - 2 2",
-                    "2r1k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQk - 2 2",
-                    "3rk2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQk - 2 2",
-                    "r3k1r1/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2",
-                    "r3kr2/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpbr/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpb1/bn2pnpr/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpb1/bn2pnp1/3PN2r/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpb1/bn2pnp1/3PN3/Pp2P2r/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k2r/p1pp1pb1/bn1qpnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1pp1pb1/bn2pnp1/2qPN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3kq1r/p1pp1pb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r2qk2r/p1pp1pb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqp2/bn2pnpb/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3kb1r/p1ppqp2/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/pbppqpb1/1n2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/3PN3/Ppb1P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/3PN3/Pp2P3/2Nb1Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBbPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r1n1k2r/p1ppqpb1/b3pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/b3pnp1/3nN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/b3pnp1/3PN3/Ppn1P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3PN3/Pp2n3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k1nr/p1ppqpb1/bn2p1p1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3nN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpbn/bn2p1p1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3PN2n/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3PN3/Pp2P1n1/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2"
-                ]
-            ],
-            [
-                "r3k2r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 b kq - 1 2",
-                [
-                    "r4k1r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w - - 2 3",
-                    "r2k3r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w - - 2 3",
-                    "r3k2r/p3qpb1/bnpppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 0 3",
-                    "r3k2r/p1pq1pb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3",
-                    "r3k2r/p1p1qpb1/1n1ppnp1/1b1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 0 3",
-                    "r3k2r/p1pnqpb1/b2ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3",
-                    "r3k2r/p1pnqpb1/bn1pp1p1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3"
-                ]
-            ],
-            [
-                "r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1",
-                [
-                    # King moves
-                    "r2k3r/8/8/8/8/8/8/R4RK1 w - - 2 2",
-                    "r6r/3k4/8/8/8/8/8/R4RK1 w - - 2 2",
-                    "r6r/4k3/8/8/8/8/8/R4RK1 w - - 2 2",
-                    "2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2",
-                    # Rook moves
-                    "1r2k2r/8/8/8/8/8/8/R4RK1 w k - 2 2",
-                    "2r1k2r/8/8/8/8/8/8/R4RK1 w k - 2 2",
-                    "3rk2r/8/8/8/8/8/8/R4RK1 w k - 2 2",
-                    "4k2r/r7/8/8/8/8/8/R4RK1 w k - 2 2",
-                    "4k2r/8/r7/8/8/8/8/R4RK1 w k - 2 2",
-                    "4k2r/8/8/r7/8/8/8/R4RK1 w k - 2 2",
-                    "4k2r/8/8/8/r7/8/8/R4RK1 w k - 2 2",
-                    "4k2r/8/8/8/8/r7/8/R4RK1 w k - 2 2",
-                    "4k2r/8/8/8/8/8/r7/R4RK1 w k - 2 2",
-                    "4k2r/8/8/8/8/8/8/r4RK1 w k - 0 2",
-                    "r3k1r1/8/8/8/8/8/8/R4RK1 w q - 2 2",
-                    "r3kr2/8/8/8/8/8/8/R4RK1 w q - 2 2",
-                    "r3k3/7r/8/8/8/8/8/R4RK1 w q - 2 2",
-                    "r3k3/8/7r/8/8/8/8/R4RK1 w q - 2 2",
-                    "r3k3/8/8/7r/8/8/8/R4RK1 w q - 2 2",
-                    "r3k3/8/8/8/7r/8/8/R4RK1 w q - 2 2",
-                    "r3k3/8/8/8/8/7r/8/R4RK1 w q - 2 2",
-                    "r3k3/8/8/8/8/8/7r/R4RK1 w q - 2 2",
-                    "r3k3/8/8/8/8/8/8/R4RKr w q - 2 2",
-                ]
-            ],
-            [
-                "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
-                [
-                    # King moves
-                    "r3k2r/8/8/8/8/8/8/R4K1R b kq - 1 1",
-                    "r3k2r/8/8/8/8/8/8/R2K3R b kq - 1 1",
-                    "r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1",
-                    "r3k2r/8/8/8/8/8/8/2KR3R b kq - 1 1",
-                    "r3k2r/8/8/8/8/8/3K4/R6R b kq - 1 1",
-                    "r3k2r/8/8/8/8/8/4K3/R6R b kq - 1 1",
-                    "r3k2r/8/8/8/8/8/5K2/R6R b kq - 1 1",
-                    # Rook moves
-                    "r3k2r/8/8/8/8/8/8/1R2K2R b Kkq - 1 1",
-                    "r3k2r/8/8/8/8/8/8/2R1K2R b Kkq - 1 1",
-                    "r3k2r/8/8/8/8/8/8/3RK2R b Kkq - 1 1",
-                    "r3k2r/8/8/8/8/8/R7/4K2R b Kkq - 1 1",
-                    "r3k2r/8/8/8/8/R7/8/4K2R b Kkq - 1 1",
-                    "r3k2r/8/8/8/R7/8/8/4K2R b Kkq - 1 1",
-                    "r3k2r/8/8/R7/8/8/8/4K2R b Kkq - 1 1",
-                    "r3k2r/8/R7/8/8/8/8/4K2R b Kkq - 1 1",
-                    "r3k2r/R7/8/8/8/8/8/4K2R b Kkq - 1 1",
-                    "R3k2r/8/8/8/8/8/8/4K2R b Kk - 0 1",
-                    "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1",
-                    "r3k2r/8/8/8/8/8/8/R3KR2 b Qkq - 1 1"
-                    "r3k2r/8/8/8/8/8/7R/R3K3 b Qkq - 1 1",
-                    "r3k2r/8/8/8/8/7R/8/R3K3 b Qkq - 1 1",
-                    "r3k2r/8/8/8/7R/8/8/R3K3 b Qkq - 1 1",
-                    "r3k2r/8/8/7R/8/8/8/R3K3 b Qkq - 1 1",
-                    "r3k2r/8/7R/8/8/8/8/R3K3 b Qkq - 1 1",
-                    "r3k2r/7R/8/8/8/8/8/R3K3 b Qkq - 1 1",
-                    "r3k2R/8/8/8/8/8/8/R3K3 b Qq - 0 1"
-                ]
-            ],
-            [
-                "4k2R/8/8/8/8/8/8/4K3 b - - 1 1",
-                [
-                    # King moves
-                    "7R/5k2/8/8/8/8/8/4K3 w - - 2 2",
-                    "7R/4k3/8/8/8/8/8/4K3 w - - 2 2",
-                    "7R/3k4/8/8/8/8/8/4K3 w - - 2 2"
-                ]
-            ],
-            [
-                "4b2k/pppppppp/8/8/8/8/8/4K3 b - - 1 1",
-                [
-                    # King moves
-                    "4b1k1/pppppppp/8/8/8/8/8/4K3 w - - 2 2",
-                    # Pawn moves
-                    "4b2k/1ppppppp/p7/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/p1pppppp/1p6/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/pp1ppppp/2p5/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/ppp1pppp/3p4/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/pppp1ppp/4p3/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/ppppp1pp/5p2/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/pppppp1p/6p1/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/ppppppp1/7p/8/8/8/8/4K3 w - - 0 2",
-                    "4b2k/1ppppppp/8/p7/8/8/8/4K3 w - a6 0 2",
-                    "4b2k/p1pppppp/8/1p6/8/8/8/4K3 w - b6 0 2",
-                    "4b2k/pp1ppppp/8/2p5/8/8/8/4K3 w - c6 0 2",
-                    "4b2k/ppp1pppp/8/3p4/8/8/8/4K3 w - d6 0 2",
-                    "4b2k/pppp1ppp/8/4p3/8/8/8/4K3 w - e6 0 2",
-                    "4b2k/ppppp1pp/8/5p2/8/8/8/4K3 w - f6 0 2",
-                    "4b2k/pppppp1p/8/6p1/8/8/8/4K3 w - g6 0 2",
-                    "4b2k/ppppppp1/8/7p/8/8/8/4K3 w - h6 0 2",
-                ]
-            ],
-            [
-                "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                [
-                    # Rooks move
-                    "1r2k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2",
-                    "2r1k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2",
-                    "3rk2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2",
+        LOG_MOVE_TEST('Testing all possible moves from given positions')
 
-                    "r3k1r1/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
-                    "r3kr2/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpbr/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpb1/bn2pnpr/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpb1/bn2pnp1/3P3r/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
-                    "r3k3/p1ppqpb1/bn2pnp1/3P4/1p2P1Nr/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2",
-                    # King moves
-                    "r2k3r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
-                    "r4k1r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
-                    # Castling
-                    "2kr3r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
-                    "r4rk1/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2",
-                    # Queen moves
-                    "r2qk2r/p1pp1pb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3kq1r/p1pp1pb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1pp1pb1/bn1qpnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1pp1pb1/bn2pnp1/2qP4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    # Bishops move
-                    "r1b1k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/pbppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/1b1P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/3P4/1pb1P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2Nb1Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBbPPP/R3K2R w KQkq - 0 2",
-                    "r3kb1r/p1ppqp2/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqp2/bn2pnpb/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    # Knights move
-                    "r1n1k2r/p1ppqpb1/b3pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/b3pnp1/3n4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/b3pnp1/3P4/1pn1P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/b3pnp1/3P4/np2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k1nr/p1ppqpb1/bn2p1p1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpbn/bn2p1p1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3P3n/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3P4/1p2P1n1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3P4/1p2n1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn2p1p1/3n4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-                    # Pawns move
-                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/4P1N1/1pN2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/4P1N1/2p2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-
-                    "r3k2r/p2pqpb1/bnp1pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p2pqpb1/bn2pnp1/2pP4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 2",
-
-                    "r3k2r/p1p1qpb1/bn1ppnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-
-                    "r3k2r/p1ppqpb1/bn3np1/3p4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-                    "r3k2r/p1ppqpb1/bn3np1/3Pp3/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-
-                    "r3k2r/p1ppqpb1/bn2pn2/3P2p1/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2",
-
-                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 2"
-                ]
-            ],
-            [
-                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-                [
-                    # Rooks move
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2R1K2R b Kkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/3RK2R b Kkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K1R1 b Qkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3KR2 b Qkq - 1 1",
-                    # King moves
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R2K3R b kq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4K1R b kq - 1 1",
-                    # Castling
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2KR3R b kq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 1 1",
-                    # Queen moves
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1Q2p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N3Qp/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N4Q/PPPBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PQ2/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PNQ2/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1Q1/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN2Q/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    # Bishops move
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPP1BPPP/R1B1K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1BQ1p/PPP1BPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PB2/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN1B1/1p2P3/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnpB/3PN3/1p2P3/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3KB1R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R2BK2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NB1Q1p/PPPB1PPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1pB1P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1",
-                    # Knights move
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q1p/PPPBBPPP/RN2K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q1p/PPPBBPPP/R2NK2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Np2P3/5Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/1N1PN3/1p2P3/5Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P3/2NN1Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1pN1P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bnN1pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1",
-                    "r3k2r/p1ppqpb1/bn2pnN1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1pNqpb1/bn2pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqNb1/bn2pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
-                    # Pawns move
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 0 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/1PN2Q1p/P1PBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqpb1/bn1Ppnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqpb1/bn2Pnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2QPp/PPPBBP1P/R3K2R b KQkq - 0 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1P1/2N2Q1p/PPPBBP1P/R3K2R b KQkq g3 0 1",
-                    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1P/PPPBBP1P/R3K2R b KQkq - 0 1"
-                ]
-            ]
-        ]
+        testVector = require("../test-data/next-position-test") # .json omitted
 
         for [startPositionString, expectedEndPositionStrings] in testVector
             positionObj = positionClass.fromString(startPositionString)
@@ -529,7 +282,6 @@ module.exports =
             calculatedMoves = positionObj.allPossibleMoves()
             calculatedEndPositionStrings = []
             for calculatedMove in calculatedMoves
-                LOG_MOVE_TEST(calculatedMove.getNewPosition().toString())
                 calculatedEndPositionStrings.push( calculatedMove.getNewPosition().toString() )
             result = compareArrays expectedEndPositionStrings, calculatedEndPositionStrings
 
@@ -545,25 +297,26 @@ module.exports =
         # todo     console.log(stdout)
         # todo exec('ls', fct)
 
-        testVector = require("../test-data/division-test"); # .json omitted
+        testVector = require("../test-data/division-test") # .json omitted
 
         for [positionString, depth, expectedData] in testVector
-            LOG_DIVISION_TEST("Verifying \"#{positionString}\":")
+            LOG_DIVISION_TEST("Verifying \"#{positionString}\" at depth #{depth}:")
 
             position = positionClass.fromString(positionString)
 
             calculatedMoves = {}
-            moveCount = 0
-            for calculatedMoveObj in position.allPossibleMoves()
+            calculatedMoves = position.allPossibleMoves()
+            calculatedMoveQty = calculatedMoves.length
+            for calculatedMoveObj, calculatedMoveId in calculatedMoves
                 calculatedMoveString = calculatedMoveObj.toString()
+                LOG_DIVISION_TEST("  * calculated move #{(calculatedMoveId+1)} of #{calculatedMoveQty} (#{calculatedMoveString})")
                 assert.isDefined(expectedData[calculatedMoveString], "Unexpected move #{calculatedMoveString} from position #{positionString}")
                 calculatedMoves[calculatedMoveString] = calculatedMoveObj
-                moveCount++
 
             moveId = 0
             for expectedMove, expectedQuantity of expectedData
                 moveId++
-                LOG_DIVISION_TEST("  * move #{moveId} of #{moveCount} (#{expectedMove.toString()})")
+                LOG_DIVISION_TEST("  * expected move #{moveId} (#{expectedMove.toString()})")
 
                 assert.isDefined(calculatedMoves[expectedMove], "Uncalculated move #{expectedMove} from position #{positionString}")
 
@@ -575,8 +328,6 @@ module.exports =
                 testDepth(calculatedMoves[expectedMove].getNewPosition(), counters, 0, newDepth)
                 calculatedQuantity = counters[newDepth - 1]
                 assert.eql(calculatedQuantity, expectedQuantity, "Unexpected quantity for move #{expectedMove} from position #{positionString}: is #{calculatedQuantity}, expected #{expectedQuantity}")
-
-
 
     'test perftsuite.txt': (beforeExit, assert) ->
 
@@ -610,7 +361,7 @@ module.exports =
             counters = getInitialCounterArray(maxDepth)
 
             # Count
-            testDepth(positionObj, counters, 0, maxDepth, true)
+            testDepth(positionObj, counters, 0, maxDepth, LOG_PERFTSUITE)
 
             # Now compare the counters to the expected result
             for counter, counterId in counters
@@ -638,5 +389,5 @@ module.exports =
 
             LOG_PERFTSUITE("All positions OK up to depth #{DEPTH}.")
 
-        fs.readFile('./test-data/perftsuite.txt', 'utf8', testFile);
+        fs.readFile('./test-data/perftsuite.txt', 'utf8', testFile)
 

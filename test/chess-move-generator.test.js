@@ -19,17 +19,19 @@ Profiling:
         sudo dtrace -n 'profile-97/pid == 1851 && arg1/{@[jstack(150, 8000)] = count(); } tick-60s { exit(0); }' > stacks.out
         stackvis dtrace flamegraph-svg < stacks.out > stacks.svg
 */
-var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG_DIVISION_TEST, LOG_MOVE_TEST, LOG_PERFTSUITE, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString;
+var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG_DIVISION_TEST, LOG_ELEMENTARY_TEST, LOG_MOVE_TEST, LOG_PERFTSUITE, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString, utilityClass;
 
 DO_ELEMENTARY_TESTS = false;
 
 DO_POSSIBLE_MOVE_TEST = false;
 
-DO_DIVISION_TEST = true;
+DO_DIVISION_TEST = false;
 
-DO_PERFTSUITE = false;
+DO_PERFTSUITE = true;
 
-DEPTH = 5;
+DEPTH = 6;
+
+LOG_ELEMENTARY_TEST = function(x) {};
 
 LOG_MOVE_TEST = function(x) {};
 
@@ -47,6 +49,8 @@ positionClass = chessMoveGenerator.position;
 
 bitBoardClass = chessMoveGenerator.bitBoard;
 
+utilityClass = chessMoveGenerator.utility;
+
 getInitialCounterArray = function(maxDepth) {
   var counters, iDepth, _ref;
   counters = [];
@@ -56,9 +60,9 @@ getInitialCounterArray = function(maxDepth) {
   return counters;
 };
 
-testDepth = function(positionObj, counters, currentDepth, maxDepth, log) {
+testDepth = function(positionObj, counters, currentDepth, maxDepth, logFunction) {
   var move, moveId, moveQuantity, moves, pos, _len;
-  if (log == null) log = false;
+  if (logFunction == null) logFunction = false;
   moves = positionObj.allPossibleMoves();
   moveQuantity = moves.length;
   counters[currentDepth] += moveQuantity;
@@ -66,8 +70,8 @@ testDepth = function(positionObj, counters, currentDepth, maxDepth, log) {
   if (currentDepth >= maxDepth) return true;
   for (moveId = 0, _len = moves.length; moveId < _len; moveId++) {
     move = moves[moveId];
-    if (log) {
-      LOG_PERFTSUITE("  * testing move " + (moveId + 1) + " of " + moveQuantity + " (" + (move.toString()) + ")");
+    if (logFunction) {
+      logFunction("  * testing move " + (moveId + 1) + " of " + moveQuantity + " (" + (move.toString()) + ")");
     }
     pos = move.getNewPosition().clone(false, true);
     testDepth(pos, counters, currentDepth, maxDepth);
@@ -75,6 +79,7 @@ testDepth = function(positionObj, counters, currentDepth, maxDepth, log) {
     delete move;
     pos = null;
     delete pos;
+    if (logFunction) logFunction('gaga');
   }
   moves = null;
   delete moves;
@@ -110,6 +115,7 @@ compareArrays = function(arr1, arr2) {
 module.exports = {
   'test CMGBitBoard#valueOfSquare': function(beforeExit, assert) {
     if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing bitboard values of squares');
     assert.eql([0x0, 0x8000, 0x0, 0x0], bitBoardClass.valueOfSquare(31));
     assert.eql([0x1, 0x0, 0x0, 0x0], bitBoardClass.valueOfSquare(0));
     assert.eql([0x80, 0x0, 0x0, 0x0], bitBoardClass.valueOfSquare(7));
@@ -122,18 +128,23 @@ module.exports = {
     return assert.eql([0x0, 0x0, 0x0, 0x8000], bitBoardClass.valueOfSquare(63));
   },
   'test CMGPosition#fromString': function(beforeExit, assert) {
-    var posObj, positionString, positionStrings, _i, _len, _results;
+    var newPositionString, posObj, positionString, positionStrings, _i, _len, _results;
     if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing string to and from position object');
     positionStrings = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 0", "8/2p5/K2p4/1P5r/1R3p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/1P5r/KR3p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/R4p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/2R2p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/3R1p1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/4Rp1k/8/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5R1k/8/4P1P1/8 b - - 0 0", "8/2p5/3p4/KP5r/5p1k/1R6/4P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5p1k/8/1R2P1P1/8 b - - 1 0", "8/2p5/3p4/KP5r/5p1k/8/4P1P1/1R6 b - - 1 0", "8/2p5/3p4/KP5r/1R3p1k/4P3/6P1/8 b - - 0 0", "8/2p5/3p4/KP5r/1R2Pp1k/8/6P1/8 b - e3 0 0", "8/2p5/3p4/KP5r/1R3p1k/6P1/4P3/8 b - - 0 0", "8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 0"];
     _results = [];
     for (_i = 0, _len = positionStrings.length; _i < _len; _i++) {
       positionString = positionStrings[_i];
-      _results.push(posObj = positionClass.fromString(positionString));
+      posObj = positionClass.fromString(positionString);
+      assert.eql(true, posObj instanceof positionClass);
+      newPositionString = posObj.toString();
+      _results.push(assert.eql(positionString, newPositionString));
     }
     return _results;
   },
   'test CMGPosition#_allowedCastlingValueToString': function(beforeExit, assert) {
     if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing allowed castling values to string');
     assert.eql("KQkq", positionClass._allowedCastlingValueToString(15));
     assert.eql("KQk", positionClass._allowedCastlingValueToString(14));
     assert.eql("KQq", positionClass._allowedCastlingValueToString(13));
@@ -153,6 +164,7 @@ module.exports = {
   },
   'test CMGPosition#_allowedCastlingStringToValue': function(beforeExit, assert) {
     if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing allowed castling values from string');
     assert.eql(15, positionClass._allowedCastlingStringToValue("KQkq"));
     assert.eql(14, positionClass._allowedCastlingStringToValue("KQk"));
     assert.eql(13, positionClass._allowedCastlingStringToValue("KQq"));
@@ -173,6 +185,7 @@ module.exports = {
   'test CMGPosition#playerColorCode': function(beforeExit, assert) {
     var colorCode, positionObj, positionString, testData, _i, _len, _ref, _results;
     if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing player color code');
     testData = [['w', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"], ['b', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"], ['b', "rn2k2r/pppppppp/8/8/1P1P1P1P/8/P1P1P1P1/R3K2R b Kq e3 3 12"], ['w', "r3k2r/pppppppp/8/8/1P1P1P1P/8/P1P1P1P1/RN2K2R w Qk e6 3 12"]];
     _results = [];
     for (_i = 0, _len = testData.length; _i < _len; _i++) {
@@ -185,6 +198,7 @@ module.exports = {
   'test CMGPosition#opponentColorCode': function(beforeExit, assert) {
     var colorCode, positionObj, positionString, testData, _i, _len, _ref, _results;
     if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing opponent color code');
     testData = [['b', "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"], ['w', "4k3/8/R7/8/7b/8/3P4/7K b - - 33 32"], ['w', "rn2k2r/pppppppp/8/8/1P1P1P1P/8/P1P1P1P1/R3K2R b Kq e3 3 12"], ['b', "r3k2r/pppppppp/8/8/1P1P1P1P/8/P1P1P1P1/RN2K2R w Qk e6 3 12"]];
     _results = [];
     for (_i = 0, _len = testData.length; _i < _len; _i++) {
@@ -194,10 +208,25 @@ module.exports = {
     }
     return _results;
   },
+  'test CMGUtil#0x88representation': function(beforeExit, assert) {
+    var returnedKey, square0x88value, square0x88values, squareKey, _results;
+    if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing square key conversion to and from 0x88 representation');
+    square0x88values = [0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 22, 23, 32, 33, 34, 35, 36, 37, 38, 39, 48, 49, 50, 51, 52, 53, 54, 55, 64, 65, 66, 67, 68, 69, 70, 71, 80, 81, 82, 83, 84, 85, 86, 87, 96, 97, 98, 99, 100, 101, 102, 103, 112, 113, 114, 115, 116, 117, 118, 119];
+    _results = [];
+    for (squareKey = 0; squareKey <= 63; squareKey++) {
+      square0x88value = utilityClass.to0x88representation(squareKey);
+      assert.eql(square0x88value, square0x88values[squareKey], "0x88 representation of " + squareKey + " should be " + square0x88values[squareKey] + " and not " + square0x88value + ".");
+      returnedKey = utilityClass.from0x88representation(square0x88value);
+      _results.push(assert.eql(squareKey, returnedKey, "Square key of " + squareKey + " has 0x88 representation " + square0x88value + ", which is incorrectly converted back to " + returnedKey + "."));
+    }
+    return _results;
+  },
   'test CMGPosition#allPossibleMoves': function(beforeExit, assert) {
     var calculatedEndPositionStrings, calculatedMove, calculatedMoves, eps, expectedEndPositionStrings, positionObj, result, startPositionString, testVector, _i, _j, _k, _len, _len2, _len3, _ref, _results;
     if (!DO_POSSIBLE_MOVE_TEST) return;
-    testVector = [["r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 1 1", ["r4rk1/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2", "2kr3r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2", "r4k1r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2", "r2k3r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQ - 2 2", "r3k2r/p2pqpb1/bnp1pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p2pqpb1/bn2pnp1/2pPN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq c6 0 2", "r3k2r/p1p1qpb1/bn1ppnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn3np1/3pN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pn2/3PN1p1/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/P3P3/1pN2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/4P3/p1N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/P3P3/2p2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q2/1PPBBPpP/R3K2R w KQkq - 0 2", "1r2k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQk - 2 2", "2r1k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQk - 2 2", "3rk2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQk - 2 2", "r3k1r1/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2", "r3kr2/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpbr/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpb1/bn2pnpr/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpb1/bn2pnp1/3PN2r/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpb1/bn2pnp1/3PN3/Pp2P2r/2N2Q1p/1PPBBPPP/R3K2R w KQq - 2 2", "r3k2r/p1pp1pb1/bn1qpnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1pp1pb1/bn2pnp1/2qPN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3kq1r/p1pp1pb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r2qk2r/p1pp1pb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqp2/bn2pnpb/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3kb1r/p1ppqp2/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/pbppqpb1/1n2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r1b1k2r/p1ppqpb1/1n2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/1b1PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/3PN3/Ppb1P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/3PN3/Pp2P3/2Nb1Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBbPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/b3pnp1/3PN3/np2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r1n1k2r/p1ppqpb1/b3pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/b3pnp1/3nN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/b3pnp1/3PN3/Ppn1P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/bn2p1p1/3PN3/Pp2n3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k1nr/p1ppqpb1/bn2p1p1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/bn2p1p1/3nN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpbn/bn2p1p1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/bn2p1p1/3PN2n/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/bn2p1p1/3PN3/Pp2P1n1/2N2Q1p/1PPBBPPP/R3K2R w KQkq - 2 2"]], ["r3k2r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 b kq - 1 2", ["r4k1r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w - - 2 3", "r2k3r/p1p1qpb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w - - 2 3", "r3k2r/p3qpb1/bnpppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 0 3", "r3k2r/p1pq1pb1/bn1ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3", "r3k2r/p1p1qpb1/1n1ppnp1/1b1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 0 3", "r3k2r/p1pnqpb1/b2ppnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3", "r3k2r/p1pnqpb1/bn1pp1p1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R4RK1 w kq - 2 3"]], ["r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1", ["r2k3r/8/8/8/8/8/8/R4RK1 w - - 2 2", "r6r/3k4/8/8/8/8/8/R4RK1 w - - 2 2", "r6r/4k3/8/8/8/8/8/R4RK1 w - - 2 2", "2kr3r/8/8/8/8/8/8/R4RK1 w - - 2 2", "1r2k2r/8/8/8/8/8/8/R4RK1 w k - 2 2", "2r1k2r/8/8/8/8/8/8/R4RK1 w k - 2 2", "3rk2r/8/8/8/8/8/8/R4RK1 w k - 2 2", "4k2r/r7/8/8/8/8/8/R4RK1 w k - 2 2", "4k2r/8/r7/8/8/8/8/R4RK1 w k - 2 2", "4k2r/8/8/r7/8/8/8/R4RK1 w k - 2 2", "4k2r/8/8/8/r7/8/8/R4RK1 w k - 2 2", "4k2r/8/8/8/8/r7/8/R4RK1 w k - 2 2", "4k2r/8/8/8/8/8/r7/R4RK1 w k - 2 2", "4k2r/8/8/8/8/8/8/r4RK1 w k - 0 2", "r3k1r1/8/8/8/8/8/8/R4RK1 w q - 2 2", "r3kr2/8/8/8/8/8/8/R4RK1 w q - 2 2", "r3k3/7r/8/8/8/8/8/R4RK1 w q - 2 2", "r3k3/8/7r/8/8/8/8/R4RK1 w q - 2 2", "r3k3/8/8/7r/8/8/8/R4RK1 w q - 2 2", "r3k3/8/8/8/7r/8/8/R4RK1 w q - 2 2", "r3k3/8/8/8/8/7r/8/R4RK1 w q - 2 2", "r3k3/8/8/8/8/8/7r/R4RK1 w q - 2 2", "r3k3/8/8/8/8/8/8/R4RKr w q - 2 2"]], ["r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", ["r3k2r/8/8/8/8/8/8/R4K1R b kq - 1 1", "r3k2r/8/8/8/8/8/8/R2K3R b kq - 1 1", "r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1", "r3k2r/8/8/8/8/8/8/2KR3R b kq - 1 1", "r3k2r/8/8/8/8/8/3K4/R6R b kq - 1 1", "r3k2r/8/8/8/8/8/4K3/R6R b kq - 1 1", "r3k2r/8/8/8/8/8/5K2/R6R b kq - 1 1", "r3k2r/8/8/8/8/8/8/1R2K2R b Kkq - 1 1", "r3k2r/8/8/8/8/8/8/2R1K2R b Kkq - 1 1", "r3k2r/8/8/8/8/8/8/3RK2R b Kkq - 1 1", "r3k2r/8/8/8/8/8/R7/4K2R b Kkq - 1 1", "r3k2r/8/8/8/8/R7/8/4K2R b Kkq - 1 1", "r3k2r/8/8/8/R7/8/8/4K2R b Kkq - 1 1", "r3k2r/8/8/R7/8/8/8/4K2R b Kkq - 1 1", "r3k2r/8/R7/8/8/8/8/4K2R b Kkq - 1 1", "r3k2r/R7/8/8/8/8/8/4K2R b Kkq - 1 1", "R3k2r/8/8/8/8/8/8/4K2R b Kk - 0 1", "r3k2r/8/8/8/8/8/8/R3K1R1 b Qkq - 1 1", "r3k2r/8/8/8/8/8/8/R3KR2 b Qkq - 1 1", "r3k2r/8/8/8/8/8/7R/R3K3 b Qkq - 1 1", "r3k2r/8/8/8/8/7R/8/R3K3 b Qkq - 1 1", "r3k2r/8/8/8/7R/8/8/R3K3 b Qkq - 1 1", "r3k2r/8/8/7R/8/8/8/R3K3 b Qkq - 1 1", "r3k2r/8/7R/8/8/8/8/R3K3 b Qkq - 1 1", "r3k2r/7R/8/8/8/8/8/R3K3 b Qkq - 1 1", "r3k2R/8/8/8/8/8/8/R3K3 b Qq - 0 1"]], ["4k2R/8/8/8/8/8/8/4K3 b - - 1 1", ["7R/5k2/8/8/8/8/8/4K3 w - - 2 2", "7R/4k3/8/8/8/8/8/4K3 w - - 2 2", "7R/3k4/8/8/8/8/8/4K3 w - - 2 2"]], ["4b2k/pppppppp/8/8/8/8/8/4K3 b - - 1 1", ["4b1k1/pppppppp/8/8/8/8/8/4K3 w - - 2 2", "4b2k/1ppppppp/p7/8/8/8/8/4K3 w - - 0 2", "4b2k/p1pppppp/1p6/8/8/8/8/4K3 w - - 0 2", "4b2k/pp1ppppp/2p5/8/8/8/8/4K3 w - - 0 2", "4b2k/ppp1pppp/3p4/8/8/8/8/4K3 w - - 0 2", "4b2k/pppp1ppp/4p3/8/8/8/8/4K3 w - - 0 2", "4b2k/ppppp1pp/5p2/8/8/8/8/4K3 w - - 0 2", "4b2k/pppppp1p/6p1/8/8/8/8/4K3 w - - 0 2", "4b2k/ppppppp1/7p/8/8/8/8/4K3 w - - 0 2", "4b2k/1ppppppp/8/p7/8/8/8/4K3 w - a6 0 2", "4b2k/p1pppppp/8/1p6/8/8/8/4K3 w - b6 0 2", "4b2k/pp1ppppp/8/2p5/8/8/8/4K3 w - c6 0 2", "4b2k/ppp1pppp/8/3p4/8/8/8/4K3 w - d6 0 2", "4b2k/pppp1ppp/8/4p3/8/8/8/4K3 w - e6 0 2", "4b2k/ppppp1pp/8/5p2/8/8/8/4K3 w - f6 0 2", "4b2k/pppppp1p/8/6p1/8/8/8/4K3 w - g6 0 2", "4b2k/ppppppp1/8/7p/8/8/8/4K3 w - h6 0 2"]], ["r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1", ["1r2k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2", "2r1k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2", "3rk2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQk - 2 2", "r3k1r1/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2", "r3kr2/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpbr/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpb1/bn2pnpr/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpb1/bn2pnp1/3P3r/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2", "r3k3/p1ppqpb1/bn2pnp1/3P4/1p2P1Nr/2N2Q1p/PPPBBPPP/R3K2R w KQq - 2 2", "r2k3r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2", "r4k1r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2", "2kr3r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2", "r4rk1/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQ - 2 2", "r2qk2r/p1pp1pb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3kq1r/p1pp1pb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1pp1pb1/bn1qpnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1pp1pb1/bn2pnp1/2qP4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r1b1k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/pbppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/1b1P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/3P4/1pb1P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2Nb1Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/1n2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBbPPP/R3K2R w KQkq - 0 2", "r3kb1r/p1ppqp2/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqp2/bn2pnpb/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r1n1k2r/p1ppqpb1/b3pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/b3pnp1/3n4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/b3pnp1/3P4/1pn1P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/b3pnp1/3P4/np2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k1nr/p1ppqpb1/bn2p1p1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpbn/bn2p1p1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/bn2p1p1/3P3n/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 2 2", "r3k2r/p1ppqpb1/bn2p1p1/3P4/1p2P1n1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2p1p1/3P4/1p2n1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2p1p1/3n4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pnp1/3P4/4P1N1/1pN2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pnp1/3P4/4P1N1/2p2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p2pqpb1/bnp1pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p2pqpb1/bn2pnp1/2pP4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 2", "r3k2r/p1p1qpb1/bn1ppnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn3np1/3p4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn3np1/3Pp3/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pn2/3P2p1/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 2", "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 2"]], ["r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1", ["r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/1R2K2R b Kkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2R1K2R b Kkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/3RK2R b Kkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K1R1 b Qkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3KR2 b Qkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R2K3R b kq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4K1R b kq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/2KR3R b kq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R4RK1 b kq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1Q2p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NQ3p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N3Qp/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N4Q/PPPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PQ2/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PNQ2/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pQp1/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1Q1/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN2Q/1p2P3/2N4p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPP1BPPP/R1B1K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N1BQ1p/PPP1BPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2PB2/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN1B1/1p2P3/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnpB/3PN3/1p2P3/2N2Q1p/PPP1BPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3KB1R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R2BK2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2NB1Q1p/PPPB1PPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1pB1P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/1B1PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPB1PPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q1p/PPPBBPPP/RN2K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/5Q1p/PPPBBPPP/R2NK2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Np2P3/5Q1p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/1N1PN3/1p2P3/5Q1p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P3/2NN1Q1p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3P4/1pN1P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnp1/3P4/1p2P1N1/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bnN1pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 1 1", "r3k2r/p1ppqpb1/bn2pnN1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1pNqpb1/bn2pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqNb1/bn2pnp1/3P4/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/1PN2Q1p/P1PBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn1Ppnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2Pnp1/4N3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2QPp/PPPBBP1P/R3K2R b KQkq - 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P1P1/2N2Q1p/PPPBBP1P/R3K2R b KQkq g3 0 1", "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1P/PPPBBP1P/R3K2R b KQkq - 0 1"]]];
+    LOG_MOVE_TEST('Testing all possible moves from given positions');
+    testVector = require("../test-data/next-position-test");
     _results = [];
     for (_i = 0, _len = testVector.length; _i < _len; _i++) {
       _ref = testVector[_i], startPositionString = _ref[0], expectedEndPositionStrings = _ref[1];
@@ -213,7 +242,6 @@ module.exports = {
       calculatedEndPositionStrings = [];
       for (_k = 0, _len3 = calculatedMoves.length; _k < _len3; _k++) {
         calculatedMove = calculatedMoves[_k];
-        LOG_MOVE_TEST(calculatedMove.getNewPosition().toString());
         calculatedEndPositionStrings.push(calculatedMove.getNewPosition().toString());
       }
       result = compareArrays(expectedEndPositionStrings, calculatedEndPositionStrings);
@@ -222,23 +250,23 @@ module.exports = {
     return _results;
   },
   'test division': function(beforeExit, assert) {
-    var calculatedMoveObj, calculatedMoveString, calculatedMoves, calculatedQuantity, counters, depth, expectedData, expectedMove, expectedQuantity, moveCount, moveId, newDepth, position, positionString, testVector, _i, _j, _len, _len2, _ref, _ref2, _results;
+    var calculatedMoveId, calculatedMoveObj, calculatedMoveQty, calculatedMoveString, calculatedMoves, calculatedQuantity, counters, depth, expectedData, expectedMove, expectedQuantity, moveId, newDepth, position, positionString, testVector, _i, _len, _len2, _ref, _results;
     if (!DO_DIVISION_TEST) return;
     testVector = require("../test-data/division-test");
     _results = [];
     for (_i = 0, _len = testVector.length; _i < _len; _i++) {
       _ref = testVector[_i], positionString = _ref[0], depth = _ref[1], expectedData = _ref[2];
-      LOG_DIVISION_TEST("Verifying \"" + positionString + "\":");
+      LOG_DIVISION_TEST("Verifying \"" + positionString + "\" at depth " + depth + ":");
       position = positionClass.fromString(positionString);
       calculatedMoves = {};
-      moveCount = 0;
-      _ref2 = position.allPossibleMoves();
-      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-        calculatedMoveObj = _ref2[_j];
+      calculatedMoves = position.allPossibleMoves();
+      calculatedMoveQty = calculatedMoves.length;
+      for (calculatedMoveId = 0, _len2 = calculatedMoves.length; calculatedMoveId < _len2; calculatedMoveId++) {
+        calculatedMoveObj = calculatedMoves[calculatedMoveId];
         calculatedMoveString = calculatedMoveObj.toString();
+        LOG_DIVISION_TEST("  * calculated move " + (calculatedMoveId + 1) + " of " + calculatedMoveQty + " (" + calculatedMoveString + ")");
         assert.isDefined(expectedData[calculatedMoveString], "Unexpected move " + calculatedMoveString + " from position " + positionString);
         calculatedMoves[calculatedMoveString] = calculatedMoveObj;
-        moveCount++;
       }
       moveId = 0;
       _results.push((function() {
@@ -247,7 +275,7 @@ module.exports = {
         for (expectedMove in expectedData) {
           expectedQuantity = expectedData[expectedMove];
           moveId++;
-          LOG_DIVISION_TEST("  * move " + moveId + " of " + moveCount + " (" + (expectedMove.toString()) + ")");
+          LOG_DIVISION_TEST("  * expected move " + moveId + " (" + (expectedMove.toString()) + ")");
           assert.isDefined(calculatedMoves[expectedMove], "Uncalculated move " + expectedMove + " from position " + positionString);
           if (depth === 1) continue;
           newDepth = depth - 1;
@@ -278,7 +306,7 @@ module.exports = {
       maxDepth = DEPTH;
       if (elems.length < maxDepth) maxDepth = elem.length;
       counters = getInitialCounterArray(maxDepth);
-      testDepth(positionObj, counters, 0, maxDepth, true);
+      testDepth(positionObj, counters, 0, maxDepth, LOG_PERFTSUITE);
       for (counterId = 0, _len = counters.length; counterId < _len; counterId++) {
         counter = counters[counterId];
         expectedQuantity = parseInt(elems[counterId].split(' ')[1]);

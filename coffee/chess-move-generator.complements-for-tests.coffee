@@ -114,6 +114,11 @@ NoCompile.position['_allowedCastlingValueToString'] = CMGPosition._allowedCastli
 NoCompile.bitBoard = CMGBitBoard
 NoCompile.bitBoard['valueOfSquare'] = CMGBitBoard.valueOfSquare
 
+NoCompile.utility = CMGUtil
+NoCompile.utility['to0x88representation']   = CMGUtil.to0x88representation
+NoCompile.utility['from0x88representation'] = CMGUtil.from0x88representation
+
 if typeof module isnt 'undefined'
     module['exports']['bitBoard'] = NoCompile.bitBoard
+    module['exports']['utility']  = NoCompile.utility
 

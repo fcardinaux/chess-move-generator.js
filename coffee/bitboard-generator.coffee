@@ -506,6 +506,16 @@ module.exports.generateJavascriptLines = (bitBoardDataPrefix, positionDataPrefix
         lines.push( "    #{JSON.stringify( valueOfSquare(square) )}" + sep )
     lines.push("];")
 
+    lines.push("#{bitBoardDataPrefix}SQUARE_QUADRANTS_AND_VALUES = [")
+    sep = ','
+    for quadrant in [0..3]
+        for squareInQuadrant in [0..15]
+            square = 16 * quadrant + squareInQuadrant
+            sep = '' if square is 63
+            valueInQuadrant = 1 << squareInQuadrant
+            lines.push( "    [#{quadrant}, #{valueInQuadrant}]" + sep )
+    lines.push("];")
+
     return lines
 
 quadrantRepresentation = (moves) ->
