@@ -29,7 +29,7 @@ DO_DIVISION_TEST = false;
 
 DO_PERFTSUITE = true;
 
-DEPTH = 6;
+DEPTH = 5;
 
 LOG_ELEMENTARY_TEST = function(x) {};
 
@@ -79,7 +79,6 @@ testDepth = function(positionObj, counters, currentDepth, maxDepth, logFunction)
     delete move;
     pos = null;
     delete pos;
-    if (logFunction) logFunction('gaga');
   }
   moves = null;
   delete moves;
