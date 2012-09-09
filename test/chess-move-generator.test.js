@@ -29,7 +29,7 @@ DO_DIVISION_TEST = false;
 
 DO_PERFTSUITE = true;
 
-DEPTH = 5;
+DEPTH = 6;
 
 LOG_ELEMENTARY_TEST = function(x) {};
 

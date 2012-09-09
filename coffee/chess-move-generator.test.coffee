@@ -32,7 +32,7 @@ DO_ELEMENTARY_TESTS = false
 DO_POSSIBLE_MOVE_TEST = false
 DO_DIVISION_TEST = false
 DO_PERFTSUITE = true
-DEPTH = 5
+DEPTH = 6
 
 LOG_ELEMENTARY_TEST = (x) ->
     # console.log(x)
