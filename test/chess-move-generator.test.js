@@ -21,13 +21,13 @@ Profiling:
 */
 var DEPTH, DO_DIVISION_TEST, DO_ELEMENTARY_TESTS, DO_PERFTSUITE, DO_POSSIBLE_MOVE_TEST, LOG_DIVISION_TEST, LOG_ELEMENTARY_TEST, LOG_MOVE_TEST, LOG_PERFTSUITE, bitBoardClass, chessMoveGenerator, compareArrays, getInitialCounterArray, positionClass, testDepth, trimString, utilityClass;
 
-DO_ELEMENTARY_TESTS = false;
+DO_ELEMENTARY_TESTS = true;
 
 DO_POSSIBLE_MOVE_TEST = false;
 
 DO_DIVISION_TEST = false;
 
-DO_PERFTSUITE = true;
+DO_PERFTSUITE = false;
 
 DEPTH = 6;
 
@@ -218,6 +218,44 @@ module.exports = {
       assert.eql(square0x88value, square0x88values[squareKey], "0x88 representation of " + squareKey + " should be " + square0x88values[squareKey] + " and not " + square0x88value + ".");
       returnedKey = utilityClass.from0x88representation(square0x88value);
       _results.push(assert.eql(squareKey, returnedKey, "Square key of " + squareKey + " has 0x88 representation " + square0x88value + ", which is incorrectly converted back to " + returnedKey + "."));
+    }
+    return _results;
+  },
+  'test CMGPosition#isDraw': function(beforeExit, assert) {
+    var draw, draws, nonDraw, nonDraws, pos, _i, _j, _len, _len2, _results;
+    if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing if specific positions are draw');
+    draws = ['4k3/4P3/4K3/8/8/8/8/8 b - - 1 1'];
+    for (_i = 0, _len = draws.length; _i < _len; _i++) {
+      draw = draws[_i];
+      pos = positionClass.fromString(draw);
+      assert.eql(true, pos.isDraw(), "Position " + draw + " was supposed to be a draw, but isnt.");
+    }
+    nonDraws = ['4k3/4P3/4K3/8/8/8/8/8 w - - 1 1'];
+    _results = [];
+    for (_j = 0, _len2 = nonDraws.length; _j < _len2; _j++) {
+      nonDraw = nonDraws[_j];
+      pos = positionClass.fromString(nonDraw);
+      _results.push(assert.eql(false, pos.isDraw(), "Position " + nonDraw + " was supposed NOT to be a draw, but is."));
+    }
+    return _results;
+  },
+  'test CMGPosition#getWinnerColorCode': function(beforeExit, assert) {
+    var losingPosition, losingPositions, notLosingPosition, notLosingPositions, pos, _i, _j, _len, _len2, _results;
+    if (!DO_ELEMENTARY_TESTS) return;
+    LOG_ELEMENTARY_TEST('Testing if specific positions are losing');
+    losingPositions = ['4k3/4Q3/4K3/8/8/8/8/8 b - - 1 1'];
+    for (_i = 0, _len = losingPositions.length; _i < _len; _i++) {
+      losingPosition = losingPositions[_i];
+      pos = positionClass.fromString(losingPosition);
+      assert.eql('w', pos.getWinnerColorCode(), "Position " + losingPosition + " was supposed to be losing, but isnt.");
+    }
+    notLosingPositions = ['4k3/4P3/4K3/8/8/8/8/8 w - - 1 1'];
+    _results = [];
+    for (_j = 0, _len2 = notLosingPositions.length; _j < _len2; _j++) {
+      notLosingPosition = notLosingPositions[_j];
+      pos = positionClass.fromString(notLosingPosition);
+      _results.push(assert.eql(false, pos.getWinnerColorCode(), "Position " + notLosingPosition + " was supposed NOT to be losing, but is."));
     }
     return _results;
   },

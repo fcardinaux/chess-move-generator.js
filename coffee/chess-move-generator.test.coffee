@@ -28,10 +28,10 @@ Profiling:
 # =============================================================================
 
 # Set the performance test depth here
-DO_ELEMENTARY_TESTS = false
+DO_ELEMENTARY_TESTS = true
 DO_POSSIBLE_MOVE_TEST = false
 DO_DIVISION_TEST = false
-DO_PERFTSUITE = true
+DO_PERFTSUITE = false
 DEPTH = 6
 
 LOG_ELEMENTARY_TEST = (x) ->
@@ -259,6 +259,44 @@ module.exports =
             assert.eql(square0x88value, square0x88values[squareKey], "0x88 representation of #{squareKey} should be #{square0x88values[squareKey]} and not #{square0x88value}.")
             returnedKey     = utilityClass.from0x88representation(square0x88value)
             assert.eql(squareKey, returnedKey, "Square key of #{squareKey} has 0x88 representation #{square0x88value}, which is incorrectly converted back to #{returnedKey}.")
+
+    'test CMGPosition#isDraw': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
+        LOG_ELEMENTARY_TEST('Testing if specific positions are draw')
+
+        draws = ['4k3/4P3/4K3/8/8/8/8/8 b - - 1 1']
+
+        for draw in draws
+            pos = positionClass.fromString(draw)
+            assert.eql(true, pos.isDraw(), "Position #{draw} was supposed to be a draw, but isnt.")
+
+        nonDraws = ['4k3/4P3/4K3/8/8/8/8/8 w - - 1 1']
+
+        for nonDraw in nonDraws
+            pos = positionClass.fromString(nonDraw)
+            assert.eql(false, pos.isDraw(), "Position #{nonDraw} was supposed NOT to be a draw, but is.")
+
+    'test CMGPosition#getWinnerColorCode': (beforeExit, assert) ->
+
+        if not DO_ELEMENTARY_TESTS
+            return
+
+        LOG_ELEMENTARY_TEST('Testing if specific positions are losing')
+
+        losingPositions = ['4k3/4Q3/4K3/8/8/8/8/8 b - - 1 1']
+
+        for losingPosition in losingPositions
+            pos = positionClass.fromString( losingPosition )
+            assert.eql('w', pos.getWinnerColorCode(), "Position #{losingPosition} was supposed to be losing, but isnt.")
+
+        notLosingPositions = ['4k3/4P3/4K3/8/8/8/8/8 w - - 1 1']
+
+        for notLosingPosition in notLosingPositions
+            pos = positionClass.fromString(notLosingPosition)
+            assert.eql(false, pos.getWinnerColorCode(), "Position #{notLosingPosition} was supposed NOT to be losing, but is.")
 
     'test CMGPosition#allPossibleMoves': (beforeExit, assert) ->
 

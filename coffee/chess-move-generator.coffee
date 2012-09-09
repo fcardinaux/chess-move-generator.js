@@ -456,56 +456,77 @@ class CMGPosition
         ###
         squareKey = CMGUtil.toString(squareKey)
 
-        if not piece
-            piece = @_getPieceOnSquare(squareKey)
+        if not @lazy.hasOwnProperty('almvf')
+            @lazy['almvf'] = {}
 
-        if not piece
-            return []
+        if not @lazy['almvf'].hasOwnProperty(squareKey)
 
-        if piece.color isnt @turn
-            return []
+            @lazy['almvf'][squareKey] = []
 
-        # Search all pseudo moves from the given square
-        pseudoMoves = @_allPseudoMovesFromSquare(squareKey)
+            if not piece
+                piece = @_getPieceOnSquare(squareKey)
 
-        # Finally, eliminate invalid moves:
-        out = []
+            if not piece
+                return @lazy['almvf'][squareKey]
 
-        for pseudoMove in pseudoMoves
-            if pseudoMove.isValidPseudoMove()
-                out.push(pseudoMove)
+            if piece.color isnt @turn
+                return @lazy['almvf'][squareKey]
 
-        return out
+            # Search all pseudo moves from the given square
+            pseudoMoves = @_allPseudoMovesFromSquare(squareKey)
+
+            # Finally, eliminate invalid moves:
+            for pseudoMove in pseudoMoves
+                if pseudoMove.isValidPseudoMove()
+                    @lazy['almvf'][squareKey].push(pseudoMove)
+
+        return @lazy['almvf'][squareKey]
 
     allPossibleMoves: () ->
         ###
         Get all possible moves
         @return (array)
         ###
-        result = []
+        if not @lazy.hasOwnProperty('almv')
+            @lazy['almv'] = []
 
-        for square, piece of @pieces
-            if piece.color isnt @turn
-                continue
-            moves = @allPossibleMovesFrom(square, piece)
-            if moves.length > 0
-                result = result.concat(moves)
+            for square, piece of @pieces
+                if piece.color isnt @turn
+                    continue
+                moves = @allPossibleMovesFrom(square, piece)
+                if moves.length > 0
+                    @lazy['almv'] = @lazy['almv'].concat(moves)
 
-        return result
+        return @lazy['almv']
 
     isDraw: () ->
         ###
         Is the position a draw
         @return boolean
         ###
-        return 'todo'
+        if @allPossibleMoves().length > 0
+            return false
+        return not @isKingAttacked()
 
     getWinnerColorCode: () ->
         ###
         Get the winner color code
         @return (false|'b'|'w')
         ###
-        return 'todo'
+        if @allPossibleMoves().length > 0
+            return false
+
+        if not @isKingAttacked()
+            return false
+
+        return @opponentColorCode()
+
+    isKingAttacked: () ->
+        ###
+        Is the king in chess
+        @return boolean
+        ###
+        return ( not CMGBitBoard.boolNand( @bitBoards.allPiecesOfColorAndType[@turn]['k'], @_pseudoThreatsOnPlayerBeforeMove() ) )
 
     # -------------------------------------------------------------------------
     # Private functions of object (comparable to non static methods)
@@ -1173,7 +1194,7 @@ class CMGMove
 
             doUnprotectionTest = false # Not necessary, since we already have tested the end position
 
-        else if not CMGBitBoard.boolNand( @startPosition.bitBoards.allPiecesOfColorAndType[@startPosition.turn]['k'], @startPosition._pseudoThreatsOnPlayerBeforeMove() )
+        else if @startPosition.isKingAttacked()
             # King was under attack before move, test if king protected by landing square
             if not @startPosition._attackedKingProtectedByTargetSquareOfNonKingMove(this)
                 return CMGPosition.PSEUDO_ONLY
