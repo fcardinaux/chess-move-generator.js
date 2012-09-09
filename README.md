@@ -4,30 +4,39 @@ Author: François Cardinaux
 
 Copyright: François Cardinaux, Genève, 2012
 
-Licences: to be defined, very probably open source
+Licences: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)
 
 ---
 
-# Description of the Project
+## Description of the Project
 
 A chess move generator.
 
-# Folder structure
+## Folder structure
 
-    coffee/
-    javascript/
-    node_modules/
+    (project root)
+     |
+     +-- coffee/                    All coffeescript source files
+     |
+     +-- javascript/                Contains the resulting javascript file
+     |
+     +-- js-generator/              Contains javascript files for bitboard script generation (see js.sh in project root for more information)
+     |
+     +-- node_modules/              The only necessary node.js module is "expresso" for unit tests
+     |
+     +-- test/                      Contains the javascript for unit tests
+     |
+     +-- test-data/                 Contains all test vectors for unit tests
 
-# Credits
+## Credits
 
 For the algorithm:
 
-* http://stackoverflow.com/questions/494721/what-are-some-good-resources-for-writing-a-chess-engine
-* Jonatan Pettersson's blog:
-* http://mediocrechess.blogspot.com/
-* [Move generation](http://mediocrechess.blogspot.com/2006/12/guide-move-generation.html)
-* [The 0x88 representation](http://mediocrechess.blogspot.com/2006/12/0x88-representation.html)
-* [Attacked squares](http://mediocrechess.blogspot.com/2006/12/guide-attacked-squares.html)
+* StackOverflow question: [What are some good resources-for-writing-a-chess-engine](http://stackoverflow.com/questions/494721/what-are-some-good-resources-for-writing-a-chess-engine)
+* [Jonatan Pettersson's blog](http://mediocrechess.blogspot.com/):
+     * [Move generation](http://mediocrechess.blogspot.com/2006/12/guide-move-generation.html)
+     * [The 0x88 representation](http://mediocrechess.blogspot.com/2006/12/0x88-representation.html)
+     * [Attacked squares](http://mediocrechess.blogspot.com/2006/12/guide-attacked-squares.html)
 
 Bitboard algorithm:
 
@@ -36,13 +45,12 @@ Bitboard algorithm:
 
 For debugging and tests:
 
-* Roce: http://www.rocechess.ch/rocee.html
-* Perft suite: http://hem.passagen.se/maragor/perftsuite.epd, which can be found inside Roce
-* http://mediocrechess.blogspot.com/2007/01/guide-perft-scores.html
-* http://www.albert.nu/programs/sharper/perft.asp
-* https://chessprogramming.wikispaces.com/Perft+Results
+* [Roce](http://www.rocechess.ch/rocee.html)
+* [Perft suite](http://hem.passagen.se/maragor/perftsuite.epd), which can be also found inside Roce
+* [Perft scores - validating the move generation](http://mediocrechess.blogspot.com/2007/01/guide-perft-scores.html)
+* An article on [Perft calculation](http://www.albert.nu/programs/sharper/perft.asp)
+* [Perft Results](https://chessprogramming.wikispaces.com/Perft+Results) on the [Chess Programming Wiki](https://chessprogramming.wikispaces.com/)
 
 # Conventions
 
-Forsyth–Edwards Notation (FEN) is used to describe a particular board position:
-* http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
+[Forsyth–Edwards Notation (FEN)](http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) is used to describe a particular board position.

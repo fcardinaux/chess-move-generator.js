@@ -141,7 +141,7 @@ case $prepend_header in
         ;;
     "yes")
         cd javascript/
-        echo '// Chess Move Generator - Copyright 2012 François Cardinaux, CH 1207 Genève - License: todo' | cat - chess-move-generator.js > temp && mv temp chess-move-generator.js
+        echo '// Chess Move Generator - Copyright 2012 François Cardinaux, CH 1207 Genève (https://github.com/fcardinaux) - License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)' | cat - chess-move-generator.js > temp && mv temp chess-move-generator.js
         cd ..
         ;;
 esac
