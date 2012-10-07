@@ -51,6 +51,6 @@ For debugging and tests:
 * An article on [Perft calculation](http://www.albert.nu/programs/sharper/perft.asp)
 * [Perft Results](https://chessprogramming.wikispaces.com/Perft+Results) on the [Chess Programming Wiki](https://chessprogramming.wikispaces.com/)
 
-# Conventions
+## Conventions
 
 [Forsyth–Edwards Notation (FEN)](http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) is used to describe a particular board position.
