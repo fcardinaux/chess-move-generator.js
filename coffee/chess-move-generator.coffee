@@ -23,6 +23,8 @@ Bitboards are used to represent specific aspects of a chess position. Each squar
 This is bigger than the [maximal exact-precision integer defined by ECMAScript](http://ecma262-5.com/ELS5_HTML.htm#Section_8.5).
 For this reason, I have decided to represent each bitboard with an array of four integers. More information about this can be found in the file bitbard-generator.coffee.
 
+@todo the constructor of CMGMove and the functions isValidMove(), allPossibleMovesFrom() and fromPositionAndMoveData() have all been changed for oware (parameter is now the EXTERNAL representation of a house). Do the same change for chess.
+
 ###
 
 class CMGBitBoard
@@ -444,7 +446,7 @@ class CMGPosition
         @param promotion (false|'q'|'r'|'n'|'b')
         @return boolean
         ###
-        move = CMGMove.fromPositionAndMoveCoordinates(this, fromSquare, toSquare, promotion)
+        move = CMGMove.fromPositionAndMoveData(this, fromSquare, toSquare, promotion)
         return ( move instanceof CMGMove )
 
     allPossibleMovesFrom: (squareKey, piece = null) ->
@@ -1031,14 +1033,14 @@ class CMGMove
         @return (CMGMove|false) Returns a CMGMove instance if valid, false otherwise
         ###
         fromSquare = moveString.substr(0, 2)
-        toString = moveString.substr(2, 2)
+        toSquare = moveString.substr(2, 2)
         promotion = false
         if moveString.length is 5
             promotion = moveString.substr(4)
 
-        @fromPositionAndMoveCoordinates(startPosition, fromSquare, toSquare, promotion)
+        @fromPositionAndMoveData(startPosition, fromSquare, toSquare, promotion)
 
-    @fromPositionAndMoveCoordinates: (startPosition, fromSquare, toSquare, promotion = false) ->
+    @fromPositionAndMoveData: (startPosition, fromSquare, toSquare, promotion = false) ->
         ###
         Get the CMGMove instance that corresponds to the specified move from the specified position
         @param startPosition (CMGPosition)
@@ -1390,7 +1392,7 @@ NoCompile.position.prototype['getWinnerColorCode'] = CMGPosition.prototype.getWi
 
 NoCompile.move = CMGMove
 NoCompile.move['fromPositionAndMoveString'] = CMGMove.fromPositionAndMoveString
-NoCompile.move['fromPositionAndMoveCoordinates'] = CMGMove.fromPositionAndMoveCoordinates
+NoCompile.move['fromPositionAndMoveData'] = CMGMove.fromPositionAndMoveData
 NoCompile.move.prototype['toString'] = CMGMove.prototype.toString
 NoCompile.move.prototype['getNewPosition'] = CMGMove.prototype.getNewPosition
 
