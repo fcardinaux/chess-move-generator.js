@@ -77,13 +77,13 @@ testDepth = (positionObj, counters, currentDepth, maxDepth, logFunction = false)
         pos = move.getNewPosition().clone(false, true) # With the lazy object
         testDepth(pos, counters, currentDepth, maxDepth)
         move = null
-        delete move
+        # delete move
         pos = null
-        delete pos
+        # delete pos
 
     # Avoid too many allocations
     moves = null
-    delete moves
+    # delete moves
 
     return true
 
