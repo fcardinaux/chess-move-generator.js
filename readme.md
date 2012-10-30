@@ -1,12 +1,10 @@
-# Chess Move Generator
-## Readme File
-Author: François Cardinaux
+% Chess Move Generator - Readme File
+% Author: François Cardinaux
+% Date: 2012.08
 
 Copyright: François Cardinaux, Genève, 2012
 
 Licences: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)
-
----
 
 ## Description of the Project
 
@@ -17,6 +15,8 @@ A chess move generator.
     (project root)
      |
      +-- coffee/                    All coffeescript source files
+     |
+     +-- for-pandoc/                Stylesheets and templates to generate beautiful HTML documents
      |
      +-- javascript/                Contains the resulting javascript file
      |
@@ -53,4 +53,4 @@ For debugging and tests:
 
 ## Conventions
 
-[Forsyth–Edwards Notation (FEN)](http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) is used to describe a particular board position.
+The [Forsyth–Edwards Notation (FEN)](http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) is used to describe a particular board position.

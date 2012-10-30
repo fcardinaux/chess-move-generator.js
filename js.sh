@@ -87,6 +87,12 @@ echo "Merging the bitboards at the end of the chess move generator..."
 cd javascript/
 awk 'FNR==1{print "/* "FILENAME" */"}1' bitboards.js >> chess-move-generator.js
 rm bitboards.js
+cd ..
+
+# =============================================================================
+
+echo "Moving the unit tests where appropriate..."
+cd javascript/
 mv chess-move-generator.test.js ../test/
 cd ..
 

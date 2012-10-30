@@ -1,12 +1,10 @@
-# Chess Move Generator
-## Building File
-Author: François Cardinaux
+% Chess Move Generator - Building File
+% Author: François Cardinaux
+% Date: 2012.08
 
 Copyright: François Cardinaux, Genève, 2012
 
-Licences: see README.md
-
----
+Licences: see readme.md
 
 ## Installation of the necessary software
 
