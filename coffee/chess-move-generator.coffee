@@ -24,6 +24,7 @@ This is bigger than the [maximal exact-precision integer defined by ECMAScript](
 For this reason, I have decided to represent each bitboard with an array of four integers. More information about this can be found in the file bitbard-generator.coffee.
 
 @todo the constructor of CMGMove and the functions isValidMove(), allPossibleMovesFrom() and fromPositionAndMoveData() have all been changed for oware (parameter is now the EXTERNAL representation of a house). Do the same change for chess.
+@todo perform unit test with depth 6 again because of the 'delete' removed in the unit test script (no longer accepted since version 1.3.3)
 
 ###
 
@@ -1077,6 +1078,7 @@ class CMGMove
         out = new CMGMove(startPosition, fromSquare, fromPiece, toSquare, toPiece, castling, takenPiece, takenOnSquare)
 
         if not out.isValid()
+            out = null
             return false
 
         return out

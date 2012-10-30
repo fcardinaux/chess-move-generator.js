@@ -77,13 +77,13 @@ testDepth = (positionObj, counters, currentDepth, maxDepth, logFunction = false)
         pos = move.getNewPosition().clone(false, true) # With the lazy object
         testDepth(pos, counters, currentDepth, maxDepth)
         move = null
-        # delete move
+        # No longer works with Coffeescript version 1.3.3: delete move
         pos = null
-        # delete pos
+        # No longer works with Coffeescript version 1.3.3: delete pos
 
     # Avoid too many allocations
     moves = null
-    # delete moves
+    # No longer works with Coffeescript version 1.3.3: delete moves
 
     return true
 
