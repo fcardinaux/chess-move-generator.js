@@ -1,10 +1,8 @@
-% Chess Move Generator - Readme File
-% Author: François Cardinaux
-% Date: 2012.08
+# Chess Move Generator - Readme File
 
-Copyright: François Cardinaux, Genève, 2012
-
-Licences: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)
+* Author: François Cardinaux
+* Copyright: François Cardinaux, Genève, 2012
+* Licences: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)
 
 ## Description of the Project
 
