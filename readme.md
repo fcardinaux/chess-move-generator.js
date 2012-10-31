@@ -14,7 +14,7 @@ A chess move generator.
 
 You do not have to download or clone this entire project to use the Javascript program. You only need to download the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/javascript/chess-move-generator.js"><code>javascript/chess-move-generator.js</code></a> file.
 
-The detailed description of the API is still missing, but can be deduced from the last lines of fhe <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/coffee/chess-move-generator.coffee"><code>coffee/chess-move-generator.coffee</code></a> file.
+The <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/tutorial.md"><code>tutorial.md</code></a> file shows you how to use the chess move generator.
 
 ### To get an overview of the folder structure
 
@@ -104,12 +104,43 @@ For debugging and tests:
 
 ## Conventions
 
+### Board representation
+
 The [Forsyth–Edwards Notation (FEN)](http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) is used to represent a particular board position.
 
 The present generator accepts two versions of this notation:
 
 * the standard FEN notation, which includes the halfmove clock and the fullmove number
 * a version without these two counters. This version can be used to represent a chess problem.
+
+### Move representation
+
+Each move is represented by a four- or five-character string which is similar to the [coordinate notation](http://en.wikipedia.org/wiki/Chess_notation#Move_notations_for_humans), except that we omit the dash between the start and end squares. More specifically:
+
+* the first two characters represent the start square, and the next two characters represent the end square of the move.
+* the fifth character is normally absent, except for promotion moves ('q', 'r', 'n', 'b' for promotion to queen, rook, knight and bishop)
+* No abbreviation is used to show which piece is moving or which piece is taken
+* No [annotation symbol](http://en.wikipedia.org/wiki/Punctuation_(chess)) is used either
+
+Here are some examples:
+
+* "e2e4" (e.g. first pawn move)
+* "b8c6" (knight move)
+* "c3h3" (could be a rook or a queen move)
+* "e1g1" (could be white's king-side castling)
+* "h7h8q" (white pawn promoted to queen)
+
+### Square representation
+
+In the current version of the move generator, the individual squares are represented by an integer number from 0 to 63:
+
+* 0 = a1
+* 1 = b1
+* ...
+* 7 = h1
+* 8 = a2
+* ...
+* 63 = h8
 
 ## Restriction
 
