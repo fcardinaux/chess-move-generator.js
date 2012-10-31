@@ -32,13 +32,9 @@ Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/mas
 
 Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/building.md"><code>building.md</code></a> file, section “How to run unit tests”.
 
-### To know more about Node.js
-
-Node.js is only used to create a local server for the present application. It is intended to be replaced with files served via _Alfresco_ and _Apache Tomcat_. Node.js is a vast subject, and a good start to learn about it is the [Wikipedia article](http://en.wikipedia.org/wiki/Node.js).
-
 ### To know more about any term encountered in the source code or the documentation
 
-A glossary file is still missing in this project.
+A glossary is still missing in this project.
 
 ### To know more about the Markdown syntax
 
