@@ -36,12 +36,6 @@ Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/mas
 
 A glossary is still missing in this project.
 
-### To know more about the Markdown syntax
-
-Articles:
-* [Wikipedia](http://en.wikipedia.org/wiki/Markdown)
-* [Daring Fireball](http://daringfireball.net/): [Jown Gruber's _Markdown Syntax_](http://daringfireball.net/projects/markdown/syntax)
-
 ## Folder structure
 
     (project root)
