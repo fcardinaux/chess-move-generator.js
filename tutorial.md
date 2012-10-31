@@ -167,7 +167,8 @@ console.log( move21.toString() ); // "h7h8q"
 console.log( move22.toString() ); // "h7h8q"
 
 // Getting the new position after a move
-var promotedPosition = move21.getNewPosition() // An instance of ChessPosition
+var promotedPosition = move21.getNewPosition(); // An instance of ChessPosition
+console.log( promotedPosition.toString() ); // "k6Q/8/8/K7/8/8/8/8 b - -"
 
 // An attempt to instantiate an invalid move returns false:
 var theInvalidMove = chessMove.fromPositionAndMoveString( position, "e8e7"); // Blocked by the black queen
