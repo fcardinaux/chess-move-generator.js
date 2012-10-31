@@ -12,9 +12,9 @@ A chess move generator.
 
 ### To use the Javascript chess move generator
 
-You do not have to download or clone this entire project to use the Javascript program. You only need to download the <a href="https://github.com/fcardinaux/chess-move-generator.js/javascript/chess-move-generator.js"><code>javascript/chess-move-generator.js</code></a> file.
+You do not have to download or clone this entire project to use the Javascript program. You only need to download the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/javascript/chess-move-generator.js"><code>javascript/chess-move-generator.js</code></a> file.
 
-The detailed description of the API is still missing, but can be deduced from the last lines of fhe <a href="https://github.com/fcardinaux/chess-move-generator.js/coffee/chess-move-generator.coffee"><code>coffee/chess-move-generator.coffee</code></a> file.
+The detailed description of the API is still missing, but can be deduced from the last lines of fhe <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/coffee/chess-move-generator.coffee"><code>coffee/chess-move-generator.coffee</code></a> file.
 
 ### To get an overview of the folder structure
 
@@ -22,15 +22,15 @@ Read this file further.
 
 ### To know which software must or should be installed to build and test the move generator
 
-Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/building.md"><code>building.md</code></a> file.
+Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/building.md"><code>building.md</code></a> file.
 
 ### To know how to build the move generator
 
-Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/building.md"><code>building.md</code></a> file, sections “How to build the javascript”.
+Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/building.md"><code>building.md</code></a> file, sections “How to build the javascript”.
 
 ### To know how to run unit tests
 
-Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/building.md"><code>building.md</code></a> file, section “How to run unit tests”.
+Read the <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/building.md"><code>building.md</code></a> file, section “How to run unit tests”.
 
 ### To know more about Node.js
 
