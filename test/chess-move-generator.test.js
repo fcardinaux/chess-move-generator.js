@@ -248,13 +248,13 @@ module.exports = {
       return;
     }
     LOG_ELEMENTARY_TEST('Testing if specific positions are draw');
-    draws = ['4k3/4P3/4K3/8/8/8/8/8 b - - 1 1'];
+    draws = ['r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 50 30', '4k3/4P3/4K3/8/8/8/8/8 b - - 1 1'];
     for (_i = 0, _len = draws.length; _i < _len; _i++) {
       draw = draws[_i];
       pos = positionClass.fromString(draw);
       assert.eql(true, pos.isDraw(), "Position " + draw + " was supposed to be a draw, but isnt.");
     }
-    nonDraws = ['4k3/4P3/4K3/8/8/8/8/8 w - - 1 1'];
+    nonDraws = ['r3k2r/8/8/8/8/8/8/R3K2R w KQkq -', 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 49 30', '4k3/4P3/4K3/8/8/8/8/8 w - - 1 1'];
     _results = [];
     for (_j = 0, _len1 = nonDraws.length; _j < _len1; _j++) {
       nonDraw = nonDraws[_j];

@@ -507,6 +507,8 @@ class CMGPosition
         Is the position a draw
         @return boolean
         ###
+        if @halfMoveClock >= 50
+            return true
         if @allPossibleMoves().length > 0
             return false
         return not @isKingAttacked()

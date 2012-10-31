@@ -51,4 +51,13 @@ For debugging and tests:
 
 ## Conventions
 
-The [Forsyth–Edwards Notation (FEN)](http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) is used to describe a particular board position.
+The [Forsyth–Edwards Notation (FEN)](http://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) is used to represent a particular board position.
+
+The present generator accepts two versions of this notation:
+
+* the standard FEN notation, which includes the halfmove clock and the fullmove number
+* a version without these two counters, and which can be used to represent a chess problem
+
+## Restriction
+
+The [threefold repetition rule](http://en.wikipedia.org/wiki/Threefold_repetition) is __not__ implemented in the present program. Indeed, it requires the knowledge of the entire position sequence of a game, and is therefore beyond the scope of this move generator.
