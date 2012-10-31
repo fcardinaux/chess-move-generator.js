@@ -2,7 +2,7 @@
 
 * Author: François Cardinaux
 * Copyright: François Cardinaux, Genève, 2012
-* Licences: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)
+* Licence: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)
 
 ## Description of the Project
 

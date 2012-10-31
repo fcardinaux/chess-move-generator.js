@@ -2,7 +2,7 @@
 
 * Author: François Cardinaux
 * Copyright: François Cardinaux, Genève, 2012
-* Licences: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)
+* Licence: see readme.md
 
 The detailed description of the API is still missing, but can be deduced from the last lines of fhe <a href="https://github.com/fcardinaux/chess-move-generator.js/blob/master/coffee/chess-move-generator.coffee"><code>coffee/chess-move-generator.coffee</code></a> file.
 

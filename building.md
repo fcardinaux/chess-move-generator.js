@@ -2,7 +2,7 @@
 
 * Author: François Cardinaux
 * Copyright: François Cardinaux, Genève, 2012
-* Licences: see readme.md
+* Licence: see readme.md
 
 ## Installation of the necessary software
 
