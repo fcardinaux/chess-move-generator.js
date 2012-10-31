@@ -8,23 +8,80 @@
 
 A chess move generator.
 
+## Quick Starting Guide
+
+### To use the Javascript chess move generator
+
+You do not have to download or clone this entire project to use the Javascript program. You only need to download the <a href="javascript/chess-move-generator.js"><code>javascript/chess-move-generator.js</code></a> file.
+
+The detailed description of the API is still missing, but can be deduced from the last lines of fhe <a href="coffee/chess-move-generator.coffee"><code>coffee/chess-move-generator.coffee</code></a> file.
+
+### To get an overview of the folder structure
+
+Read this file further.
+
+### To know which software must or should be installed to build and test the move generator
+
+Read the building.md file.
+
+### To know how to build the move generator
+
+Read the building.md file, sections “How to build the javascript”.
+
+### To know how to run unit tests
+
+Read the building.md file, section “How to run unit tests”.
+
+### To know more about Node.js
+
+Node.js is only used to create a local server for the present application. It is intended to be replaced with files served via _Alfresco_ and _Apache Tomcat_. Node.js is a vast subject, and a good start to learn about it is the [Wikipedia article](http://en.wikipedia.org/wiki/Node.js).
+
+### To know more about Sublime Text 2
+
+[Sublime Text 2](http://www.sublimetext.com/) is by far my favorite text editor.
+
+### To know more about any term encountered in the source code or the documentation
+
+Read the glossary.md file.
+
+### To know more about the Markdown syntax
+
+Articles:
+* [Wikipedia](http://en.wikipedia.org/wiki/Markdown)
+* [Daring Fireball](http://daringfireball.net/): [Jown Gruber's _Markdown Syntax_](http://daringfireball.net/projects/markdown/syntax)
+
 ## Folder structure
 
     (project root)
      |
-     +-- coffee/                    All coffeescript source files
+     +-- coffee/                                       All Coffeescript source files
+     |    |
+     |    +-- bitboard-generator.coffee                Meta-program to generate the bitboards
+     |    |
+     |    +-- chess-move-generator.coffee              The chess move generator in Coffeescript
+     |    |
+     |    +-- chess-move-generator
+     |    |       .complements-for-tests.coffee        This file contains code that is appended
+     |    |                                            to the chess move generator in case
+     |    |                                            you run unit tests
+     |    |
+     |    +-- chess-move-generator.test.coffee         The unit tests
      |
-     +-- for-pandoc/                Stylesheets and templates to generate beautiful HTML documents
+     +-- for-pandoc/                                   Stylesheets and templates to generate
+     |                                                 beautiful HTML documents
      |
-     +-- javascript/                Contains the resulting javascript file
+     +-- javascript/                                   Contains the resulting javascript file
      |
-     +-- js-generator/              Contains javascript files for bitboard script generation (see js.sh in project root for more information)
+     +-- js-generator/                                 Contains javascript files for bitboard
+     |                                                 script generation (see js.sh in project
+     |                                                 root for more information)
      |
-     +-- node_modules/              The only necessary node.js module is "expresso" for unit tests
+     +-- node_modules/                                 The only necessary node.js module is
+     |                                                 "expresso" for unit tests
      |
-     +-- test/                      Contains the javascript for unit tests
+     +-- test/                                         Contains the javascript for unit tests
      |
-     +-- test-data/                 Contains all test vectors for unit tests
+     +-- test-data/                                    Contains all test vectors for unit tests
 
 ## Credits
 
