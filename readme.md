@@ -110,7 +110,7 @@ Each move is represented by a four- or five-character string which is similar to
 * the first two characters represent the start square, and the next two characters represent the end square of the move.
 * the fifth character is normally absent, except for promotion moves ('q', 'r', 'n', 'b' for promotion to queen, rook, knight and bishop)
 * No abbreviation is used to show which piece is moving or which piece is taken
-* No [annotation symbol](http://en.wikipedia.org/wiki/Punctuation_(chess)) is used either
+* No <a href="http://en.wikipedia.org/wiki/Punctuation_(chess)">annotation symbol</a> is used either
 
 Here are some examples:
 
