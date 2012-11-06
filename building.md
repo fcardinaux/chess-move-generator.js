@@ -21,7 +21,7 @@ Use the following command:
 
 Three parameters are possible:
 
-* j: use the clojure compiler
+* j: use the closure compiler
 * y: use the yui compressor
 * t: run unit tests
 

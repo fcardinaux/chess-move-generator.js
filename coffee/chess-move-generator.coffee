@@ -1377,7 +1377,7 @@ class CMGUtil
 
 
 # =============================================================================
-# Export the symbols that must be kept after clojure compiler's advanced optimization
+# Export the symbols that must be kept after closure compiler's advanced optimization
 
 NoCompile = {}
 

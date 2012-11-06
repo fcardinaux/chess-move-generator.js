@@ -7,7 +7,7 @@ echo -e "\033[44mJavascript files\033[0m"
 echo -e "\033[44m================\033[0m"
 echo ""
 
-clojure_compiler=../external-tools/clojure-compiler/compiler.jar
+closure_compiler=../external-tools/closure-compiler/compiler.jar
 yui_compressor=../external-tools/yuicompressor-2.4.6.jar
 
 # =============================================================================
@@ -29,7 +29,7 @@ case $# in
         do
             case ${!arg} in
                 "j")
-                    js_compiler=clojure
+                    js_compiler=closure
                     prepend_header=yes
                     ;;
                 "t")
@@ -102,11 +102,11 @@ case $js_compiler in
     "none")
         echo "Skipping compilation."
         ;;
-    "clojure")
-        echo "Compiling with clojure compiler..."
+    "closure")
+        echo "Compiling with closure compiler..."
         cd javascript/
-        # java -jar ../$clojure_compiler --compilation_level=SIMPLE_OPTIMIZATIONS --js=chess-move-generator.js --js_output_file=cmg.js
-        java -jar ../$clojure_compiler --compilation_level=ADVANCED_OPTIMIZATIONS --js=chess-move-generator.js --js_output_file=temp
+        # java -jar ../$closure_compiler --compilation_level=SIMPLE_OPTIMIZATIONS --js=chess-move-generator.js --js_output_file=cmg.js
+        java -jar ../$closure_compiler --compilation_level=ADVANCED_OPTIMIZATIONS --js=chess-move-generator.js --js_output_file=temp
         mv temp chess-move-generator.js
         cd ..
         ;;
