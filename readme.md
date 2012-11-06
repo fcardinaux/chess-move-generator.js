@@ -39,35 +39,35 @@ A glossary is still missing in this project.
 ## Folder structure
 
     (project root)
-     |
-     +-- coffee/                                       All Coffeescript source files
-     |    |
-     |    +-- bitboard-generator.coffee                Meta-program to generate the bitboards
-     |    |
-     |    +-- chess-move-generator.coffee              The chess move generator in Coffeescript
-     |    |
-     |    +-- chess-move-generator
-     |    |       .complements-for-tests.coffee        This file contains code that is appended
-     |    |                                            to the chess move generator in case
-     |    |                                            you run unit tests
-     |    |
-     |    +-- chess-move-generator.test.coffee         The unit tests
-     |
-     +-- for-pandoc/                                   Stylesheets and templates to generate
-     |                                                 beautiful HTML documents
-     |
-     +-- javascript/                                   Contains the resulting javascript file
-     |
-     +-- js-generator/                                 Contains javascript files for bitboard
-     |                                                 script generation (see js.sh in project
-     |                                                 root for more information)
-     |
-     +-- node_modules/                                 The only necessary node.js module is
-     |                                                 "expresso" for unit tests
-     |
-     +-- test/                                         Contains the javascript for unit tests
-     |
-     +-- test-data/                                    Contains all test vectors for unit tests
+     │
+     ├-- coffee/                                       All Coffeescript source files
+     │    │
+     │    ├-- bitboard-generator.coffee                Meta-program to generate the bitboards
+     │    │
+     │    ├-- chess-move-generator.coffee              The chess move generator in Coffeescript
+     │    │
+     │    ├-- chess-move-generator
+     │    │       .complements-for-tests.coffee        This file contains code that is appended
+     │    │                                            to the chess move generator in case
+     │    │                                            you run unit tests
+     │    │
+     │    └-- chess-move-generator.test.coffee         The unit tests
+     │
+     ├-- for-pandoc/                                   Stylesheets and templates to generate
+     │                                                 beautiful HTML documents
+     │
+     ├-- javascript/                                   Contains the resulting javascript file
+     │
+     ├-- js-generator/                                 Contains javascript files for bitboard
+     │                                                 script generation (see js.sh in project
+     │                                                 root for more information)
+     │
+     ├-- node_modules/                                 The only necessary node.js module is
+     │                                                 "expresso" for unit tests
+     │
+     ├-- test/                                         Contains the javascript for unit tests
+     │
+     └-- test-data/                                    Contains all test vectors for unit tests
 
 ## Credits
 
